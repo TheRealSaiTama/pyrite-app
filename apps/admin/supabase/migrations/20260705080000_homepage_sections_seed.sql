@@ -145,7 +145,7 @@ VALUES
 }'::jsonb),
 
 -- 9. Best Deals Tabbed (Todays Best Deals — pulls from DB products)
-('home', 'best_deals_tabbed', 'Today\'s Best Deals (Tabbed)', 90, true, '{
+('home', 'best_deals_tabbed', 'Today''s Best Deals (Tabbed)', 90, true, '{
   "heading": "Todays Best Deals for you!",
   "note": "Products in this section are pulled live from the Products catalog based on their category field."
 }'::jsonb),

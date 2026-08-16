@@ -1,0 +1,277 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import {
+  mapSiteSettings,
+  normalizePublicSiteUrl,
+  mapEnabledNavLinks,
+  mapMegaMenuItems,
+  mapEnabledSections,
+  missingSectionKeys,
+  shouldRepairHeroContent,
+  repairHeroContent,
+  pickVisibleFeatures,
+  filterLiveCatalog,
+  filterFeaturedCatalog,
+  mapShopChrome,
+  mapProductChrome,
+  resolveFooterColumns,
+  matchCatalogIdsByNames,
+  normalizeTabProductIds,
+  parseCustomTabs,
+  resolveProductsByIds,
+  DEFAULT_BEST_DEALS_NAMES,
+  REQUIRED_HOME_SECTION_KEYS,
+} from "./mappers.ts";
+
+describe("mapSiteSettings", () => {
+  it("uses fallbacks when row is null", () => {
+    const s = mapSiteSettings(null);
+    assert.equal(s.brandName, "Pyrite");
+    assert.equal(s.logoUrl, "/logo.png");
+    assert.ok(s.faviconUrl);
+    assert.equal(s.primaryColor, "#0F172A");
+  });
+
+  it("prefers admin brand/logo when set", () => {
+    const s = mapSiteSettings({
+      brandName: "Acme Gifts",
+      logoUrl: "/custom-logo.png",
+      faviconUrl: "/custom.ico",
+      siteUrl: "https://example.com",
+      socials: { instagram: "https://ig.com/x" },
+    });
+    assert.equal(s.brandName, "Acme Gifts");
+    assert.equal(s.logoUrl, "/custom-logo.png");
+    assert.equal(s.faviconUrl, "/custom.ico");
+    assert.equal(s.socials.instagram, "https://ig.com/x");
+  });
+});
+
+describe("normalizePublicSiteUrl", () => {
+  it("accepts a valid origin", () => {
+    assert.equal(normalizePublicSiteUrl("https://example.com/path"), "https://example.com");
+  });
+  it("falls back on empty/invalid", () => {
+    assert.equal(normalizePublicSiteUrl(""), "http://localhost:3000");
+    assert.equal(normalizePublicSiteUrl("not-a-url"), "http://localhost:3000");
+  });
+});
+
+describe("mapEnabledNavLinks", () => {
+  it("drops disabled and empty labels", () => {
+    const out = mapEnabledNavLinks([
+      { label: "Shop", href: "/shop", enabled: true, sort_order: 1 },
+      { label: "Hidden", href: "/x", enabled: false, sort_order: 0 },
+      { label: "  ", href: "/y", enabled: true, sort_order: 2 },
+    ]);
+    assert.deepEqual(out, [{ label: "Shop", href: "/shop" }]);
+  });
+  it("sorts by sort_order", () => {
+    const out = mapEnabledNavLinks([
+      { label: "B", href: "/b", enabled: true, sort_order: 2 },
+      { label: "A", href: "/a", enabled: true, sort_order: 1 },
+    ]);
+    assert.deepEqual(
+      out.map((x) => x.label),
+      ["A", "B"],
+    );
+  });
+});
+
+describe("mapMegaMenuItems", () => {
+  it("filters disabled and builds category href", () => {
+    const out = mapMegaMenuItems([
+      { name: "CORPORATE GIFT SETS", image_url: "/a.png", subtitle: "Premium", enabled: true, sort_order: 1 },
+      { name: "HIDDEN", image: "/b.png", enabled: false },
+    ]);
+    assert.equal(out.length, 1);
+    assert.equal(out[0].name, "CORPORATE GIFT SETS");
+    assert.ok(out[0].href.includes("category="));
+    assert.ok(out[0].href.includes(encodeURIComponent("CORPORATE GIFT SETS")));
+  });
+});
+
+describe("mapEnabledSections", () => {
+  it("keys by section_key and skips disabled", () => {
+    const out = mapEnabledSections([
+      { section_key: "hero", enabled: true, content: { heading_1: "Hi" }, sort_order: 1 },
+      { section_key: "about", enabled: false, content: { x: 1 }, sort_order: 2 },
+    ]);
+    assert.deepEqual(Object.keys(out), ["hero"]);
+    assert.equal(out.hero.heading_1, "Hi");
+  });
+});
+
+describe("missingSectionKeys / hero repair", () => {
+  it("lists missing required home keys", () => {
+    const missing = missingSectionKeys(["hero", "about"]);
+    assert.ok(missing.includes("categories"));
+    assert.ok(missing.includes("best_deals"));
+    assert.ok(!missing.includes("hero"));
+    assert.equal(missingSectionKeys([...REQUIRED_HOME_SECTION_KEYS]).length, 0);
+  });
+
+  it("detects and repairs broken hero content without wiping unknown keys when already good", () => {
+    assert.equal(shouldRepairHeroContent({ headline: "Welcome" }), true);
+    assert.equal(shouldRepairHeroContent({ heading_1: "Custom" }), false);
+    const fixed = repairHeroContent({ headline: "Welcome to Pyrite" });
+    assert.equal(fixed.heading_1, "Welcome to Pyrite");
+    assert.ok(fixed.primary_cta?.url);
+    assert.ok(fixed.background_image_url);
+  });
+});
+
+describe("pickVisibleFeatures", () => {
+  it("only returns show=true with non-empty values in order", () => {
+    const out = pickVisibleFeatures({
+      size: { show: true, value: "A5" },
+      paper_quality: { show: false, value: "Hidden" },
+      page_format: { show: true, value: "  " },
+      cover_binding: { show: true, value: "Hard Bound" },
+    });
+    assert.deepEqual(
+      out.map((x) => x.label),
+      ["Size", "Cover Binding"],
+    );
+    assert.equal(out[0].value, "A5");
+  });
+});
+
+describe("filterLiveCatalog / filterFeaturedCatalog", () => {
+  const items = [
+    { id: "1", name: "A", enabled: true, featured: true },
+    { id: "2", name: "B", enabled: false, featured: true },
+    { id: "3", name: "C", enabled: true, featured: false },
+  ];
+  it("hides disabled items", () => {
+    assert.deepEqual(
+      filterLiveCatalog(items).map((i) => i.id),
+      ["1", "3"],
+    );
+  });
+  it("featured subset of live only", () => {
+    assert.deepEqual(
+      filterFeaturedCatalog(items).map((i) => i.id),
+      ["1"],
+    );
+  });
+});
+
+describe("mapShopChrome", () => {
+  it("uses defaults when content empty", () => {
+    const c = mapShopChrome(null);
+    assert.equal(c.heading, "Our Products");
+    assert.ok(c.empty_state);
+  });
+  it("prefers admin heading and empty_state", () => {
+    const c = mapShopChrome({
+      heading: "Catalog",
+      subheading: "All gifts",
+      empty_state: "Nothing here",
+    });
+    assert.equal(c.heading, "Catalog");
+    assert.equal(c.subheading, "All gifts");
+    assert.equal(c.empty_state, "Nothing here");
+  });
+});
+
+describe("mapProductChrome", () => {
+  it("uses defaults when empty", () => {
+    const c = mapProductChrome({});
+    assert.equal(c.enquiry_cta, "Enquire Now");
+    assert.equal(c.quote_cta, "Request Quote");
+    assert.ok(c.related_heading);
+  });
+  it("prefers admin CTA labels", () => {
+    const c = mapProductChrome({
+      related_heading: "Similar picks",
+      enquiry_cta: "Ask us",
+      quote_cta: "Get quote",
+    });
+    assert.equal(c.related_heading, "Similar picks");
+    assert.equal(c.enquiry_cta, "Ask us");
+    assert.equal(c.quote_cta, "Get quote");
+  });
+});
+
+describe("normalizeTabProductIds / parseCustomTabs", () => {
+  it("accepts string ids and productId objects", () => {
+    assert.deepEqual(
+      normalizeTabProductIds(["a", { productId: "b" }, { id: "c" }, ""]),
+      ["a", "b", "c"],
+    );
+  });
+  it("parses tabbed section content", () => {
+    const tabs = parseCustomTabs({
+      heading: "Deals",
+      tabs: [
+        { name: "Corporate Diaries", productIds: ["uuid-1", { productId: "uuid-2" }] },
+      ],
+    });
+    assert.equal(tabs[0].name, "Corporate Diaries");
+    assert.deepEqual(tabs[0].productIds, ["uuid-1", "uuid-2"]);
+  });
+  it("resolveProductsByIds preserves order and case-insensitive uuid", () => {
+    const byId = new Map([
+      ["abc", { name: "A" }],
+      ["def", { name: "B" }],
+    ]);
+    byId.set("abc", { name: "A" });
+    const out = resolveProductsByIds(["DEF", "abc", "missing"], byId as Map<string, { name: string }>);
+    assert.deepEqual(
+      out.map((x) => x.name),
+      ["B", "A"],
+    );
+  });
+});
+
+describe("matchCatalogIdsByNames", () => {
+  const catalog = [
+    { id: "a", name: "Management Premium PU Leather Diary 2026" },
+    { id: "b", name: "DIRECTORS Premium Leather Diary 2026" },
+    { id: "c", name: "Other Gift Set" },
+    { id: "d", name: "Heritage Leather Executive Diary 2026" },
+  ];
+  it("matches default best_deals names by fuzzy name", () => {
+    const ids = matchCatalogIdsByNames(catalog, DEFAULT_BEST_DEALS_NAMES, 4);
+    assert.deepEqual(
+      ids.map((x) => x.productId),
+      ["a", "b", "d"],
+    );
+  });
+  it("fills from catalog when names miss entirely", () => {
+    const ids = matchCatalogIdsByNames(
+      [{ id: "x", name: "Only Item" }],
+      ["Totally Unknown Product"],
+      2,
+    );
+    assert.equal(ids.length, 1);
+    assert.equal(ids[0].productId, "x");
+  });
+});
+
+describe("resolveFooterColumns", () => {
+  const fallbacks = {
+    company: [{ label: "About", href: "drawer:about" }],
+    shop: [{ label: "Shop all", href: "/shop" }],
+  };
+  it("uses CMS company/shop when non-empty", () => {
+    const r = resolveFooterColumns(
+      {
+        company: [{ label: "Privacy", href: "drawer:privacy" }],
+        shop: [{ label: "Diaries", href: "/shop?category=Diaries" }],
+        support: [{ label: "Help", href: "/shop" }],
+      },
+      fallbacks,
+    );
+    assert.equal(r.company[0].label, "Privacy");
+    assert.equal(r.shop[0].label, "Diaries");
+    assert.equal(r.support[0].label, "Help");
+  });
+  it("falls back when CMS groups empty", () => {
+    const r = resolveFooterColumns({ company: [], shop: [], support: [] }, fallbacks);
+    assert.equal(r.company[0].label, "About");
+    assert.equal(r.shop[0].label, "Shop all");
+    assert.equal(r.support.length, 0);
+  });
+});

@@ -1,0 +1,18 @@
+{
+  "name": "pyrite-app",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "concurrently -n admin,storefront -c blue,green \"npm run dev:admin\" \"npm run dev:storefront\"",
+    "dev:admin": "npm --prefix apps/admin run dev",
+    "dev:storefront": "npm --prefix apps/storefront run dev",
+    "build": "npm run build:admin && npm run build:storefront",
+    "build:admin": "npm --prefix apps/admin run build",
+    "build:storefront": "npm --prefix apps/storefront run build",
+    "lint": "npm --prefix apps/admin run lint && npm --prefix apps/storefront run lint",
+    "typecheck": "npm --prefix apps/storefront run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

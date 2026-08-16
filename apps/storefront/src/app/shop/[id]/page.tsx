@@ -1,0 +1,261 @@
+import type { Metadata } from "next";
+import Header from "@/components/sections/header";
+import Footer from "@/components/sections/footer";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import ProductGallery from "@/components/product/ProductGallery";
+import ProductInfo from "@/components/product/ProductInfo";
+import RelatedProducts from "@/components/product/RelatedProducts";
+import { getStorefrontData, getProductChrome } from "@/lib/site";
+import { findLocalItem, localRelated } from "@/lib/local-catalog";
+
+export const revalidate = 0;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }> | { id: string };
+}): Promise<Metadata> {
+  const resolvedParams = "then" in params ? await params : params;
+  const product = await getProduct(resolvedParams.id);
+  if (!product) return {};
+  const title = product.seoTitle || product.name;
+  const description = product.seoDescription || product.description || product.name;
+  return {
+    title,
+    description: description.slice(0, 200),
+    openGraph: {
+      title,
+      description: description.slice(0, 200),
+      images: product.imageUrl ? [{ url: product.imageUrl }] : undefined,
+    },
+  };
+}
+
+function normalizeTags(value?: string | string[] | null): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean).map(String);
+  const tags = value
+    .split(",")
+    .map((tag) => tag.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  return Array.from(new Set(tags));
+}
+
+async function getProduct(id: string): Promise<any | null> {
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const dbProduct = await prisma.product.findUnique({ where: { id } });
+    if (dbProduct) {
+      if (dbProduct.enabled === false) return null;
+      return {
+        id: dbProduct.id,
+        name: dbProduct.name,
+        description: dbProduct.description,
+        minPrice: dbProduct.minPrice ?? null,
+        maxPrice: dbProduct.maxPrice ?? null,
+        imageUrl: dbProduct.imageUrl ?? "",
+        category: dbProduct.category,
+        tags: dbProduct.tags || [],
+        gallery: Array.isArray(dbProduct.gallery) ? (dbProduct.gallery as string[]) : [],
+        features:
+          dbProduct.features && typeof dbProduct.features === "object" ? dbProduct.features : {},
+        seoTitle: dbProduct.seoTitle ?? null,
+        seoDescription: dbProduct.seoDescription ?? null,
+        enabled: dbProduct.enabled,
+      };
+    }
+    const dbDiary = await prisma.diary.findUnique({ where: { id } });
+    if (dbDiary) {
+      if (dbDiary.enabled === false) return null;
+      return {
+        id: dbDiary.id,
+        name: dbDiary.name,
+        description: dbDiary.description,
+        minPrice: dbDiary.minPrice ?? null,
+        maxPrice: dbDiary.maxPrice ?? null,
+        imageUrl: dbDiary.imageUrl ?? "",
+        category: dbDiary.category,
+        tags: dbDiary.tags || [],
+        gallery: Array.isArray(dbDiary.gallery) ? (dbDiary.gallery as string[]) : [],
+        features:
+          dbDiary.features && typeof dbDiary.features === "object" ? dbDiary.features : {},
+        seoTitle: dbDiary.seoTitle ?? null,
+        seoDescription: dbDiary.seoDescription ?? null,
+        enabled: dbDiary.enabled,
+      };
+    }
+  } catch (e) {
+    console.error("DB lookup failed", e);
+  }
+  const local = findLocalItem(id);
+  if (!local) return null;
+  return {
+    id: local.id,
+    name: local.name,
+    description: local.description,
+    minPrice: local.minPrice,
+    maxPrice: local.maxPrice,
+    imageUrl: local.imageUrl ?? "",
+    category: local.category,
+    tags: local.tags,
+    gallery: local.gallery,
+    features: local.features,
+    seoTitle: null,
+    seoDescription: null,
+    enabled: true,
+  };
+}
+
+async function getRelatedProducts(
+  category: string,
+  currentId: string | number,
+): Promise<any[]> {
+  const related: any[] = [];
+  const cat = (category || "").split(",")[0]?.trim() || "";
+  if (!cat) return related;
+
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const idStr = String(currentId);
+
+    const [dbProducts, dbDiaries] = await Promise.all([
+      prisma.product.findMany({
+        where: {
+          enabled: true,
+          id: { not: idStr },
+          category: { contains: cat, mode: "insensitive" },
+        },
+        take: 8,
+      }),
+      prisma.diary.findMany({
+        where: {
+          enabled: true,
+          id: { not: idStr },
+          category: { contains: cat, mode: "insensitive" },
+        },
+        take: 8,
+      }),
+    ]);
+
+    for (const item of [...dbProducts, ...dbDiaries]) {
+      related.push({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        minPrice: item.minPrice ?? null,
+        maxPrice: item.maxPrice ?? null,
+        imageUrl: item.imageUrl ?? "",
+        category: item.category,
+        tags: normalizeTags(item.tags as any),
+      });
+      if (related.length >= 8) break;
+    }
+  } catch (e) {
+    console.error("getRelatedProducts failed", e);
+  }
+
+  if (related.length) return related;
+  return localRelated(cat, String(currentId)).map((item) => ({
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    minPrice: item.minPrice,
+    maxPrice: item.maxPrice,
+    imageUrl: item.imageUrl ?? "",
+    category: item.category,
+    tags: item.tags,
+  }));
+}
+
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }> | { id: string };
+}) {
+  const resolvedParams = "then" in params ? await params : params;
+  const [product, storefront, chrome] = await Promise.all([
+    getProduct(resolvedParams.id),
+    getStorefrontData(),
+    getProductChrome(),
+  ]);
+
+  if (!product) {
+    notFound();
+  }
+
+  const relatedProducts = await getRelatedProducts(product.category || "", product.id);
+  const { settings, headerNav, megaMenu, footerLinks } = storefront;
+
+  return (
+    <div className="min-h-screen bg-white">
+      <Header
+        nav={headerNav}
+        megaMenu={megaMenu}
+        logoUrl={settings?.logoUrl}
+        brandName={settings?.brandName}
+      />
+      <main className="container mx-auto px-4 py-4">
+        <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6">
+          <Link href="/" className="hover:text-primary transition-colors">
+            Home
+          </Link>
+          <span>/</span>
+          <Link href="/shop" className="hover:text-primary transition-colors">
+            {product.category?.split(",")[0]?.trim() || "Shop"}
+          </Link>
+          {product.category?.split(",")[1] && (
+            <>
+              <span>/</span>
+              <span className="hover:text-primary transition-colors">
+                {product.category.split(",")[1].trim()}
+              </span>
+            </>
+          )}
+          <span>/</span>
+          <span className="text-gray-900 font-medium truncate max-w-xs">{product.name}</span>
+        </nav>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
+          <ProductGallery
+            imageUrl={product.imageUrl}
+            productName={product.name}
+            gallery={product.gallery}
+          />
+          <ProductInfo product={product} chrome={chrome} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-12 border-t border-gray-100">
+          <div className="flex flex-col items-center text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl">
+            <div className="w-14 h-14 bg-[#1a5f7a] text-white rounded-full flex items-center justify-center mb-4">
+              <span className="text-xs font-bold uppercase tracking-wider">New Year</span>
+            </div>
+            <h3 className="font-semibold text-gray-900 mb-2">Customized Diary & Note Books</h3>
+            <p className="text-sm text-gray-600">Perfect for corporate gifting and personal use</p>
+          </div>
+
+          <div className="flex flex-col items-center text-center p-6 bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl">
+            <div className="w-14 h-14 bg-green-600 text-white rounded-full flex items-center justify-center mb-4">
+              <span className="text-xs font-bold uppercase tracking-wider">Bulk</span>
+            </div>
+            <h3 className="font-semibold text-gray-900 mb-2">Special Pricing</h3>
+            <p className="text-sm text-gray-600">Contact us for bulk orders and custom designs</p>
+          </div>
+
+          <div className="flex flex-col items-center text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl">
+            <div className="w-14 h-14 bg-purple-600 text-white rounded-full flex items-center justify-center mb-4">
+              <span className="text-xs font-bold uppercase tracking-wider">Quick</span>
+            </div>
+            <h3 className="font-semibold text-gray-900 mb-2">Fast Shipping</h3>
+            <p className="text-sm text-gray-600">Quick delivery options available across India</p>
+          </div>
+        </div>
+
+        {relatedProducts.length > 0 && (
+          <RelatedProducts products={relatedProducts} heading={chrome.related_heading} />
+        )}
+      </main>
+      <Footer settings={settings} footerLinks={footerLinks} />
+    </div>
+  );
+}

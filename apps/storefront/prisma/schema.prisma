@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+model Product {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug        String   @unique
+  name        String
+  description String?
+  minPrice    Int?     @map("min_price")
+  maxPrice    Int?     @map("max_price")
+  category    String?
+  tags        String[]
+  imageUrl    String?  @map("image_url")
+  gallery     Json     @default("[]")
+  features    Json     @default("{}")
+  seoTitle    String?  @map("seo_title")
+  seoDescription String? @map("seo_description")
+  featured    Boolean  @default(false)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("products")
+}
+
+model Diary {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug        String   @unique
+  name        String
+  description String?
+  minPrice    Int?     @map("min_price")
+  maxPrice    Int?     @map("max_price")
+  imageUrl    String?  @map("image_url")
+  gallery     Json     @default("[]")
+  features    Json     @default("{}")
+  seoTitle    String?  @map("seo_title")
+  seoDescription String? @map("seo_description")
+  category    String?
+  tags        String[]
+  color       String?
+  size        String?
+  pages       Int?
+  coverType   String?  @map("cover_type")
+  featured    Boolean  @default(false)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("diaries")
+}
+
+model PageSection {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  pageKey    String   @map("page_key")
+  sectionKey String   @map("section_key")
+  title      String?
+  sortOrder  Int      @default(0) @map("sort_order")
+  enabled    Boolean  @default(true)
+  content    Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([pageKey, sectionKey])
+  @@map("page_sections")
+}
+
+model SiteSetting {
+  id             Int      @id @default(1)
+  brandName      String   @map("brand_name")
+  tagline        String?
+  logoUrl        String?  @map("logo_url")
+  faviconUrl     String?  @map("favicon_url")
+  primaryColor   String?  @map("primary_color")
+  whatsappNumber String?  @map("whatsapp_number")
+  phone          String?
+  email          String?
+  address        String?
+  socials        Json     @default("{}")
+  siteUrl        String?  @map("site_url")
+  previewUrl     String?  @map("preview_url")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
+
+model NavLink {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupKey  String   @map("group_key")
+  label     String
+  href      String
+  sortOrder Int      @default(0) @map("sort_order")
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@index([groupKey, sortOrder(sort: Asc)])
+  @@map("nav_links")
+}
+
+model PageSeo {
+  pageKey    String   @id @map("page_key")
+  title      String?
+  description String?
+  ogImageUrl String?  @map("og_image_url")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("page_seo")
+}

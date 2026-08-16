@@ -1,0 +1,70 @@
+import Image from "next/image";
+
+const servicesData = [
+  {
+    title: "Custom Design Services",
+    subtitle: "Professional diary design and customization solutions",
+    image: "https://cdn.prod.website-files.com/63e857eaeaf853471d5335ff/63e8c4e55b939fea169c0292_faq-min.png",
+    bgColorClass: "bg-[#0F172A]",
+    alt: "Custom design services icon",
+  },
+  {
+    title: "Bulk Order Solutions",
+    subtitle: "Special pricing and services for corporate orders and expertise in handling bulk order",
+    image: "https://cdn.prod.website-files.com/63e857eaeaf853471d5335ff/63e8c4e6707380718425e697_onlie%20payment-min.png",
+    bgColorClass: "bg-[#2c3e50]",
+    alt: "Bulk order solutions icon",
+  },
+  {
+    title: "Fast Delivery",
+    subtitle: "Quick turnaround for all diary orders nationwide",
+    image: "https://cdn.prod.website-files.com/63e857eaeaf853471d5335ff/63e8c4e544663ba3d0fd2bb8_home%20delivery-min.png",
+    bgColorClass: "bg-[#1a5d73]",
+    alt: "Fast delivery options icon",
+  },
+];
+
+const ServicesSection = ({ content }: { content?: any }) => {
+  const heading = content?.heading || "Our Premium Services";
+  const items = content?.services || servicesData;
+
+  return (
+    <section className="bg-background py-24">
+      <div className="container">
+        <div className="text-center">
+          <h3 className="text-3xl font-bold text-dark-gray mb-10">
+            {heading}
+          </h3>
+        </div>
+        <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3">
+          {items.map((service: any, index: number) => (
+            <div
+              key={index}
+              className="group bg-white rounded-2xl p-8 text-black relative overflow-hidden min-h-[220px] border border-border shadow-md transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-black/15"
+            >
+              <div className="relative z-10">
+                <h4 className="text-2xl font-semibold tracking-tight text-black">
+                  {service.title}
+                </h4>
+                <p className="mt-2 text-base font-normal text-black/80 max-w-[200px]">
+                  {service.subtitle}
+                </p>
+              </div>
+
+              <div className="absolute -bottom-10 -right-10 w-40 h-40 rounded-full overflow-hidden transition-all duration-500 ease-in-out group-hover:scale-110">
+                <Image
+                  src={service.image || service.image_url || "/logo3.png"}
+                  alt={service.alt || service.title || "Service"}
+                  fill
+                  className="object-cover transition-transform duration-500 ease-in-out group-hover:scale-125"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default ServicesSection;

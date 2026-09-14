@@ -3,6 +3,7 @@ import * as React from "react";
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { ArrowRight, Sparkles } from 'lucide-react';
 import { PolicyDrawer } from '@/components/ui/policy-drawer';
 import { resolveFooterColumns } from '@/lib/cms/mappers';
 
@@ -437,7 +438,62 @@ export default function Footer({
   };
 
   return (
-    <footer className="bg-secondary pt-16 pb-[30px]">
+    <footer className="relative bg-secondary pb-[30px] pt-4 sm:pt-6 mt-28 sm:mt-36 lg:mt-40">
+      {/* Overlapping Contact Card */}
+      <div className="container relative z-20 -mt-24 sm:-mt-32 lg:-mt-36 mb-14 sm:mb-20">
+        <div className="relative rounded-3xl sm:rounded-[32px] bg-gradient-to-br from-[#FAF3EC] via-[#F9F0E7] to-[#F4E6D8] border border-[#EADBCE] shadow-[0_25px_60px_-15px_rgba(15,23,42,0.12)] p-6 sm:p-10 lg:p-12 overflow-hidden sm:overflow-visible">
+          {/* Subtle Ambient Decorative Glows */}
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-72 h-72 rounded-full bg-gradient-to-br from-amber-200/30 via-orange-100/20 to-transparent blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-10 left-1/3 w-60 h-60 rounded-full bg-gradient-to-tr from-amber-300/20 to-transparent blur-2xl pointer-events-none" />
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            {/* Left: 3D Claymation Diary with Sparkles and Realistic Ground Shadow */}
+            <div className="lg:col-span-5 flex flex-col items-center justify-center relative">
+              <div className="relative -mt-4 sm:-mt-10 lg:-mt-16 xl:-mt-20 transition-transform duration-500 hover:scale-105">
+                <Image
+                  src="/diary-claymation.png"
+                  alt="Pyrite Bespoke Diary Claymation"
+                  width={340}
+                  height={280}
+                  priority
+                  className="relative z-10 w-52 sm:w-64 lg:w-76 h-auto object-contain drop-shadow-[0_16px_28px_rgba(42,29,19,0.22)] select-none pointer-events-none mx-auto"
+                />
+                {/* Realistic Ground Shadow */}
+                <div className="w-36 sm:w-52 lg:w-60 h-5 sm:h-7 bg-amber-950/20 rounded-[100%] blur-md sm:blur-lg -mt-3 sm:-mt-5 mx-auto" />
+              </div>
+            </div>
+
+            {/* Right: Contact Content & Action */}
+            <div className="lg:col-span-7 text-center lg:text-left relative z-10">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-xs border border-amber-900/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-slate-800 shadow-2xs mb-4">
+                <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                Custom Corporate Gifting
+              </span>
+
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                Ready to Elevate Your Corporate Gifting?
+              </h2>
+
+              <p className="mt-3 text-sm sm:text-base text-slate-600 max-w-xl leading-relaxed font-normal mx-auto lg:mx-0">
+                Connect with our team for tailored diaries, custom embossed covers, executive gift sets, and factory-direct wholesale pricing.
+              </p>
+
+              {/* Redirect CTA */}
+              <div className="mt-7 flex flex-wrap items-center justify-center lg:justify-start gap-4">
+                <button
+                  type="button"
+                  onClick={() => handleOpenDrawer("drawer:contact")}
+                  className="inline-flex items-center justify-center gap-2.5 rounded-full bg-[#0F172A] px-8 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1E293B] hover:shadow-md transition-all group cursor-pointer"
+                >
+                  <span>Contact Us</span>
+                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="container">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           <div>

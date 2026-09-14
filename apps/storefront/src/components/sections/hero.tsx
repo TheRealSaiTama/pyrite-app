@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Sparkles, CheckCircle2 } from "lucide-react";
-import { motion } from "motion/react";
+import { ArrowRight, Building2, Star, Truck } from "lucide-react";
 
 const Hero = ({ content }: { content?: any }) => {
   const heading_1 = content?.heading_1 || content?.headline || content?.heading || "Custom Corporate Diaries";
@@ -13,114 +12,109 @@ const Hero = ({ content }: { content?: any }) => {
     (typeof content?.subheading === "string" ? content.subheading : null) ||
     "Elevate your brand presence with precision logo-embossed diaries,";
   const subheading_2 = content?.subheading_2 || "executive planners, and tailored corporate gift hampers.";
-  const btnBaseText = content?.primary_cta?.base_text || content?.cta_text || "Explore 2026 Catalog";
   const btnUrl = content?.primary_cta?.url || content?.cta_href || "/shop";
 
+  const handleContactClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (typeof window !== "undefined") {
+      const target = document.getElementById("about") || document.getElementById("footer") || document.querySelector("footer");
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
+
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-slate-50/80 via-white to-white py-12 lg:py-20 border-b border-slate-100">
-      {/* Background Soft Glow */}
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-slate-200/40 rounded-full blur-3xl pointer-events-none -z-10" />
-      <div className="absolute bottom-0 left-10 w-80 h-80 bg-slate-100/60 rounded-full blur-2xl pointer-events-none -z-10" />
+    <section className="relative overflow-hidden bg-[#F9F0E7] py-14 sm:py-20 lg:py-24 border-b border-slate-200/60 min-h-[560px] lg:min-h-[620px] flex items-center">
+      {/* Background Banner Image */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <Image
+          src="/Banner.jpg"
+          alt="Custom Corporate Diaries & Luxury Gift Sets"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-right"
+        />
+        {/* Soft responsive overlay for crisp legibility on smaller screens */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#F9F0E7] via-[#F9F0E7]/85 sm:via-[#F9F0E7]/60 md:via-[#F9F0E7]/25 to-transparent lg:via-transparent" />
+      </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-10">
-        <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-          {/* Left Column: Headline, CTAs, Proof */}
-          <div className="lg:col-span-7 flex flex-col items-start">
-            {/* Pill Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 text-white text-xs font-medium tracking-wide mb-6 shadow-xs">
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>Direct Manufacturer • Bulk Gifting Specialists</span>
-            </div>
+      <div className="relative z-10 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
+        <div className="max-w-2xl lg:max-w-2xl xl:max-w-3xl flex flex-col items-start">
 
-            {/* Main Headline */}
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15] mb-5">
-              <span>{heading_1}</span>{" "}
-              <span className="block text-slate-700">{heading_2}</span>
-            </h1>
+          {/* Main Headline with refined font family */}
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[52px] xl:text-[58px] font-extrabold tracking-tight text-slate-900 leading-[1.14] mb-5 font-['Plus_Jakarta_Sans',sans-serif]">
+            <span>{heading_1}</span>{" "}
+            <span className="block text-slate-800">{heading_2}</span>
+          </h1>
 
-            {/* Subheading */}
-            <p className="text-base sm:text-lg text-slate-600 max-w-xl font-normal leading-relaxed mb-8">
-              {subheading_1} {subheading_2}
-            </p>
+          {/* Subheading */}
+          <p className="text-base sm:text-lg text-slate-700 max-w-xl font-normal leading-relaxed mb-8">
+            {subheading_1} {subheading_2}
+          </p>
 
-            {/* Dual CTA Buttons */}
-            <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto mb-10">
-              <Link
-                href={btnUrl}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-7 py-3.5 text-sm font-semibold text-white shadow-md hover:bg-slate-800 transition-all hover:gap-3 hover:shadow-lg w-full sm:w-auto"
-              >
-                <span>{btnBaseText}</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                href="/custom-design"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-100 px-7 py-3.5 text-sm font-semibold text-slate-900 hover:bg-slate-200 transition-all w-full sm:w-auto"
-              >
-                Custom Design Studio
-              </Link>
-            </div>
-
-            {/* Trust Proof Badges */}
-            <div className="pt-6 border-t border-slate-200/80 grid grid-cols-3 gap-6 w-full max-w-lg">
-              <div>
-                <div className="text-xl sm:text-2xl font-extrabold text-slate-900">500+</div>
-                <div className="text-xs text-slate-500 font-medium">Corporate Clients</div>
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-extrabold text-slate-900">4.9/5 ★</div>
-                <div className="text-xs text-slate-500 font-medium">Quality Rating</div>
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-extrabold text-slate-900">100%</div>
-                <div className="text-xs text-slate-500 font-medium">On-Time Delivery</div>
-              </div>
-            </div>
+          {/* Dual CTA Buttons (reduced roundness: rounded-lg) */}
+          <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto mb-10">
+            <Link
+              href={btnUrl}
+              className="inline-flex items-center justify-center gap-2.5 rounded-lg bg-[#0F172A] px-7 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-[#1E293B] hover:shadow-md transition-all group w-full sm:w-auto"
+            >
+              <span>Shop Now</span>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+            <Link
+              href="#about"
+              onClick={handleContactClick}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white/90 hover:bg-white text-slate-800 border border-slate-300/80 px-7 py-3.5 text-sm font-semibold shadow-2xs hover:shadow-xs transition-all w-full sm:w-auto"
+            >
+              <span>Contact Us</span>
+            </Link>
           </div>
 
-          {/* Right Column: 3D Product Showcase Card */}
-          <div className="lg:col-span-5 relative">
-            <div className="relative mx-auto max-w-md lg:max-w-none">
-              {/* Product Card Canvas */}
-              <div className="relative rounded-3xl bg-white p-4 sm:p-5 shadow-xl border border-slate-200/70 overflow-hidden group">
-                <div className="relative aspect-square w-full rounded-2xl bg-slate-50 overflow-hidden flex items-center justify-center">
-                  <Image
-                    src="/headerimage2.png"
-                    alt="Pyrite Executive Diary Showcase"
-                    fill
-                    priority
-                    sizes="(max-width: 768px) 100vw, 500px"
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
-                  
-                  {/* Bottom Overlay Label */}
-                  <div className="absolute bottom-4 left-4 right-4 text-white z-10">
-                    <span className="text-[10px] uppercase font-bold tracking-wider bg-white/20 backdrop-blur-md text-white px-2.5 py-1 rounded-full inline-block mb-1.5 border border-white/20">
-                      2026 Executive Series
-                    </span>
-                    <h3 className="text-base sm:text-lg font-bold text-white drop-shadow-md">
-                      Management PU Leather Diary
-                    </h3>
-                    <p className="text-xs text-slate-200 font-normal">
-                      With Magnetic Closure & Debossed Logo
-                    </p>
-                  </div>
+          {/* Trust Proof Badges with Icons */}
+          <div className="pt-8 border-t border-slate-300/60 grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-xl">
+            {/* Stat 1: 500+ Corporate Clients */}
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-lg bg-slate-900/5 border border-slate-900/10 flex items-center justify-center shrink-0 text-slate-800">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xl font-extrabold text-slate-900 leading-tight font-['Plus_Jakarta_Sans',sans-serif]">
+                  500+
                 </div>
+                <div className="text-xs text-slate-600 font-medium">
+                  Corporate Clients
+                </div>
+              </div>
+            </div>
 
-                {/* Feature Pills */}
-                <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                  <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-800 font-semibold px-3 py-1 rounded-full">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    Thermal Deboss
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-800 font-semibold px-3 py-1 rounded-full">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    80 GSM Paper
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-800 font-semibold px-3 py-1 rounded-full">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    Gold Foiling
-                  </span>
+            {/* Stat 2: 4.9/5 ★ Quality Rating */}
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-600">
+                <Star className="w-5 h-5 fill-amber-500 text-amber-500" />
+              </div>
+              <div>
+                <div className="text-xl font-extrabold text-slate-900 leading-tight font-['Plus_Jakarta_Sans',sans-serif]">
+                  4.9/5 ★
+                </div>
+                <div className="text-xs text-slate-600 font-medium">
+                  Quality Rating
+                </div>
+              </div>
+            </div>
+
+            {/* Stat 3: 100% On-Time Delivery */}
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-700">
+                <Truck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xl font-extrabold text-slate-900 leading-tight font-['Plus_Jakarta_Sans',sans-serif]">
+                  100%
+                </div>
+                <div className="text-xs text-slate-600 font-medium">
+                  On-Time Delivery
                 </div>
               </div>
             </div>

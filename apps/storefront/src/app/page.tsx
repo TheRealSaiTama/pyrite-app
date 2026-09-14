@@ -4,14 +4,11 @@ import Categories from "@/components/sections/categories";
 import BestDealsSection from "@/components/sections/best-deals";
 import BestDiscountsBanner from "@/components/sections/best-discounts";
 import WhyChooseUsSection from "@/components/sections/why-choose-us";
-import CustomerSatisfaction from "@/components/sections/customer-satisfaction";
-import BrandsSection from "@/components/sections/brands";
 import WeeklyPopularProducts from "@/components/sections/weekly-popular";
 import CashBackSection from "@/components/sections/cash-back";
 import TabbedProducts from "@/components/sections/tabbed-products";
 import CashBackBottom from "@/components/sections/cash-back-bottom";
 import ServicesSection from "@/components/sections/services";
-import GiftVibeAbout from "@/components/sections/giftvibe-about";
 import Footer from "@/components/sections/footer";
 import CorporateShowcase from "@/components/sections/corporate-showcase";
 import { prisma } from '@/lib/prisma';
@@ -211,15 +208,8 @@ export default async function HomePage() {
           <WhyChooseUsSection content={sections.why_choose_us} />
         )}
 
-        {/* 8. Client Brands & Social Proof */}
-        {sections.brands !== undefined && <BrandsSection content={sections.brands} />}
-        {sections.satisfaction !== undefined && (
-          <CustomerSatisfaction content={sections.satisfaction} />
-        )}
-
-        {/* 9. Manufacturing Services & Full About Section */}
+        {/* 8. Manufacturing Services */}
         {sections.services !== undefined && <ServicesSection content={sections.services} />}
-        {sections.about !== undefined && <GiftVibeAbout content={sections.about} />}
       </main>
 
       <Footer settings={settings} footerLinks={footerLinks} />

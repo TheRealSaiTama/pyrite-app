@@ -1,7 +1,9 @@
 "use client";
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'motion/react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { getCategoryHref } from '@/lib/category-links';
 
 interface Category {
@@ -115,6 +117,10 @@ const categoryData: Category[] = [
 
 const Categories = ({ content }: { content?: any }) => {
   const heading = content?.heading || "Our Products & Categories";
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
   const items: Category[] = (content?.items || categoryData)
     .map((c: any, i: number) => ({
       name: c.name || "",
@@ -128,6 +134,41 @@ const Categories = ({ content }: { content?: any }) => {
     .filter((c: Category) => c.name)
     .slice()
     .sort((a: Category, b: Category) => (a.sort_order || 0) - (b.sort_order || 0));
+
+  const checkScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const atStart = el.scrollLeft <= 6;
+    const atEnd = Math.ceil(el.scrollLeft + el.clientWidth) >= el.scrollWidth - 6;
+    setCanScrollLeft(!atStart);
+    setCanScrollRight(!atEnd);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    checkScroll();
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    window.addEventListener('resize', checkScroll);
+
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [checkScroll, items]);
+
+  const scroll = (direction: 'left' | 'right') => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const cardWidth = 304; // 280px card + 24px gap
+    const visibleCards = Math.max(1, Math.floor(el.clientWidth / cardWidth));
+    const scrollDistance = visibleCards * cardWidth;
+    el.scrollBy({
+      left: direction === 'left' ? -scrollDistance : scrollDistance,
+      behavior: 'smooth',
+    });
+  };
 
   return (
     <section id="our-products" className="bg-white py-16 lg:py-24 border-b border-slate-100">
@@ -156,67 +197,101 @@ const Categories = ({ content }: { content?: any }) => {
           </Link>
         </div>
 
-        {/* Categories Horizontal Scroll / Grid */}
-        <div className="flex overflow-x-auto gap-6 pb-6 pt-2 custom-scrollbar snap-x">
-          {items.map((category, index) => (
-            <motion.div
-              key={category.name}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.5, delay: index * 0.05 }}
-              className="w-[260px] sm:w-[280px] flex-shrink-0 snap-start"
-            >
-              <Link
-                href={
-                  category.href && category.href.trim()
-                    ? category.href.trim()
-                    : getCategoryHref(category.name)
-                }
-                className="block group"
-              >
-                <div className="relative h-[340px] rounded-3xl overflow-hidden bg-slate-900 border border-slate-200/80 shadow-sm transition-all duration-500 ease-out group-hover:shadow-2xl group-hover:-translate-y-1.5">
-                  {category.image_url &&
-                  (category.image_url.startsWith("http") || category.image_url.startsWith("/")) ? (
-                    <Image
-                      src={category.image_url}
-                      alt={category.alt || category.name}
-                      fill
-                      unoptimized={
-                        category.image_url.includes("drive.google.com") ||
-                        category.image_url.includes("googleusercontent.com")
-                      }
-                      sizes="(max-width: 640px) 280px, 300px"
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-108 opacity-90 group-hover:opacity-100"
-                    />
-                  ) : null}
-                  
-                  {/* High contrast bottom gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent transition-opacity duration-300" />
-                  
-                  {/* Top Badge */}
-                  <div className="absolute top-4 left-4 z-10">
-                    <span className="text-[10px] font-semibold tracking-wide uppercase bg-white/90 backdrop-blur-md text-slate-900 px-3 py-1 rounded-full shadow-xs">
-                      {category.subtitle || "Premium Gifting"}
-                    </span>
-                  </div>
+        {/* Categories Horizontal Scroll / Carousel */}
+        <div className="relative group/carousel">
+          {/* Left Circle Arrow Button - appears when scrolled right */}
+          <button
+            type="button"
+            onClick={() => scroll('left')}
+            aria-label="Scroll categories left"
+            className={`absolute left-0 sm:-left-3 lg:-left-5 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white text-slate-900 shadow-xl border border-slate-200/90 flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all duration-300 hover:scale-110 active:scale-95 backdrop-blur-md cursor-pointer ${
+              canScrollLeft
+                ? "opacity-100 scale-100 pointer-events-auto"
+                : "opacity-0 scale-75 pointer-events-none"
+            }`}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
 
-                  {/* Bottom Content Info */}
-                  <div className="absolute bottom-0 left-0 right-0 p-6 z-10 text-white">
-                    <h3 className="font-extrabold text-lg text-white leading-snug drop-shadow-sm group-hover:text-slate-100 transition-colors">
-                      {category.name}
-                    </h3>
-                    <div className="mt-3 flex items-center justify-between text-xs text-slate-300 font-medium">
-                      <span>Explore Catalog</span>
-                      <span className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-transform duration-300 group-hover:translate-x-1 group-hover:bg-white group-hover:text-slate-900">
-                        →
+          {/* Right Circle Arrow Button */}
+          <button
+            type="button"
+            onClick={() => scroll('right')}
+            aria-label="Scroll categories right"
+            className={`absolute right-0 sm:-right-3 lg:-right-5 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white text-slate-900 shadow-xl border border-slate-200/90 flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all duration-300 hover:scale-110 active:scale-95 backdrop-blur-md cursor-pointer ${
+              canScrollRight
+                ? "opacity-100 scale-100 pointer-events-auto"
+                : "opacity-0 scale-75 pointer-events-none"
+            }`}
+          >
+            <ArrowRight className="w-5 h-5" />
+          </button>
+
+          {/* Categories Horizontal Scroll / Grid */}
+          <div
+            ref={scrollContainerRef}
+            className="flex overflow-x-auto gap-6 pb-6 pt-2 custom-scrollbar snap-x scroll-smooth"
+          >
+            {items.map((category, index) => (
+              <motion.div
+                key={category.name}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ duration: 0.5, delay: index * 0.05 }}
+                className="w-[260px] sm:w-[280px] flex-shrink-0 snap-start"
+              >
+                <Link
+                  href={
+                    category.href && category.href.trim()
+                      ? category.href.trim()
+                      : getCategoryHref(category.name)
+                  }
+                  className="block group"
+                >
+                  <div className="relative h-[340px] rounded-3xl overflow-hidden bg-slate-900 border border-slate-200/80 shadow-sm transition-all duration-500 ease-out group-hover:shadow-2xl group-hover:-translate-y-1.5">
+                    {category.image_url &&
+                    (category.image_url.startsWith("http") || category.image_url.startsWith("/")) ? (
+                      <Image
+                        src={category.image_url}
+                        alt={category.alt || category.name}
+                        fill
+                        unoptimized={
+                          category.image_url.includes("drive.google.com") ||
+                          category.image_url.includes("googleusercontent.com")
+                        }
+                        sizes="(max-width: 640px) 280px, 300px"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-108 opacity-90 group-hover:opacity-100"
+                      />
+                    ) : null}
+                    
+                    {/* High contrast bottom gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent transition-opacity duration-300" />
+                    
+                    {/* Top Badge */}
+                    <div className="absolute top-4 left-4 z-10">
+                      <span className="text-[10px] font-semibold tracking-wide uppercase bg-white/90 backdrop-blur-md text-slate-900 px-3 py-1 rounded-full shadow-xs">
+                        {category.subtitle || "Premium Gifting"}
                       </span>
                     </div>
+
+                    {/* Bottom Content Info */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 z-10 text-white">
+                      <h3 className="font-extrabold text-lg text-white leading-snug drop-shadow-sm group-hover:text-slate-100 transition-colors">
+                        {category.name}
+                      </h3>
+                      <div className="mt-3 flex items-center justify-between text-xs text-slate-300 font-medium">
+                        <span>Explore Catalog</span>
+                        <span className="h-7 w-7 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white transition-transform duration-300 group-hover:translate-x-1 group-hover:bg-white group-hover:text-slate-900">
+                          →
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+                </Link>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
     </section>

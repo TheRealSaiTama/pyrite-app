@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { isSupabaseConfigured } from "@/integrations/supabase/env";
+import { isLocalCmsUrl, isSupabaseConfigured } from "@/integrations/supabase/env";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,7 @@ function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const configured = isSupabaseConfigured();
-  const localCms = typeof window !== "undefined" && /\/api\/cms/.test(String((import.meta as any).env?.VITE_SUPABASE_URL || ""));
+  const localCms = isLocalCmsUrl();
 
   useEffect(() => {
     if (!configured) return;

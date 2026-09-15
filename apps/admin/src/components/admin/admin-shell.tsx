@@ -49,6 +49,7 @@ const NAV: NavGroup[] = [
       { label: "Home page", to: "/pages/home", icon: Home },
       { label: "Shop page", to: "/pages/shop", icon: ShoppingBag },
       { label: "Product template", to: "/pages/product", icon: FileText },
+      { label: "Custom design", to: "/pages/custom-design", icon: FileText },
     ],
   },
   {

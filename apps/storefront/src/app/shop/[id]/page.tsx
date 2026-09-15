@@ -7,7 +7,7 @@ import ProductGallery from "@/components/product/ProductGallery";
 import ProductInfo from "@/components/product/ProductInfo";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import { getStorefrontData, getProductChrome } from "@/lib/site";
-import { findLocalItem, localRelated } from "@/lib/local-catalog";
+import { cmsItemByIdOrSlug, cmsCatalog } from "@/lib/cms/load";
 
 export const revalidate = 0;
 
@@ -43,129 +43,51 @@ function normalizeTags(value?: string | string[] | null): string[] {
 }
 
 async function getProduct(id: string): Promise<any | null> {
-  try {
-    const { prisma } = await import("@/lib/prisma");
-    const dbProduct = await prisma.product.findUnique({ where: { id } });
-    if (dbProduct) {
-      if (dbProduct.enabled === false) return null;
-      return {
-        id: dbProduct.id,
-        name: dbProduct.name,
-        description: dbProduct.description,
-        minPrice: dbProduct.minPrice ?? null,
-        maxPrice: dbProduct.maxPrice ?? null,
-        imageUrl: dbProduct.imageUrl ?? "",
-        category: dbProduct.category,
-        tags: dbProduct.tags || [],
-        gallery: Array.isArray(dbProduct.gallery) ? (dbProduct.gallery as string[]) : [],
-        features:
-          dbProduct.features && typeof dbProduct.features === "object" ? dbProduct.features : {},
-        seoTitle: dbProduct.seoTitle ?? null,
-        seoDescription: dbProduct.seoDescription ?? null,
-        enabled: dbProduct.enabled,
-      };
-    }
-    const dbDiary = await prisma.diary.findUnique({ where: { id } });
-    if (dbDiary) {
-      if (dbDiary.enabled === false) return null;
-      return {
-        id: dbDiary.id,
-        name: dbDiary.name,
-        description: dbDiary.description,
-        minPrice: dbDiary.minPrice ?? null,
-        maxPrice: dbDiary.maxPrice ?? null,
-        imageUrl: dbDiary.imageUrl ?? "",
-        category: dbDiary.category,
-        tags: dbDiary.tags || [],
-        gallery: Array.isArray(dbDiary.gallery) ? (dbDiary.gallery as string[]) : [],
-        features:
-          dbDiary.features && typeof dbDiary.features === "object" ? dbDiary.features : {},
-        seoTitle: dbDiary.seoTitle ?? null,
-        seoDescription: dbDiary.seoDescription ?? null,
-        enabled: dbDiary.enabled,
-      };
-    }
-  } catch (e) {
-    console.error("DB lookup failed", e);
+  const item = cmsItemByIdOrSlug(id);
+  if (item) {
+    return {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      minPrice: item.minPrice,
+      maxPrice: item.maxPrice,
+      imageUrl: item.imageUrl ?? "",
+      category: item.category,
+      tags: item.tags,
+      gallery: item.gallery,
+      features: item.features,
+      seoTitle: item.seoTitle,
+      seoDescription: item.seoDescription,
+      enabled: item.enabled,
+    };
   }
-  const local = findLocalItem(id);
-  if (!local) return null;
-  return {
-    id: local.id,
-    name: local.name,
-    description: local.description,
-    minPrice: local.minPrice,
-    maxPrice: local.maxPrice,
-    imageUrl: local.imageUrl ?? "",
-    category: local.category,
-    tags: local.tags,
-    gallery: local.gallery,
-    features: local.features,
-    seoTitle: null,
-    seoDescription: null,
-    enabled: true,
-  };
+  return null;
 }
 
 async function getRelatedProducts(
   category: string,
   currentId: string | number,
 ): Promise<any[]> {
-  const related: any[] = [];
-  const cat = (category || "").split(",")[0]?.trim() || "";
-  if (!cat) return related;
-
-  try {
-    const { prisma } = await import("@/lib/prisma");
-    const idStr = String(currentId);
-
-    const [dbProducts, dbDiaries] = await Promise.all([
-      prisma.product.findMany({
-        where: {
-          enabled: true,
-          id: { not: idStr },
-          category: { contains: cat, mode: "insensitive" },
-        },
-        take: 8,
-      }),
-      prisma.diary.findMany({
-        where: {
-          enabled: true,
-          id: { not: idStr },
-          category: { contains: cat, mode: "insensitive" },
-        },
-        take: 8,
-      }),
-    ]);
-
-    for (const item of [...dbProducts, ...dbDiaries]) {
-      related.push({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        minPrice: item.minPrice ?? null,
-        maxPrice: item.maxPrice ?? null,
-        imageUrl: item.imageUrl ?? "",
-        category: item.category,
-        tags: normalizeTags(item.tags as any),
-      });
-      if (related.length >= 8) break;
-    }
-  } catch (e) {
-    console.error("getRelatedProducts failed", e);
-  }
-
-  if (related.length) return related;
-  return localRelated(cat, String(currentId)).map((item) => ({
-    id: item.id,
-    name: item.name,
-    description: item.description,
-    minPrice: item.minPrice,
-    maxPrice: item.maxPrice,
-    imageUrl: item.imageUrl ?? "",
-    category: item.category,
-    tags: item.tags,
-  }));
+  const cat = (category || "").split(",")[0]?.trim().toLowerCase() || "";
+  if (!cat) return [];
+  const idStr = String(currentId);
+  return cmsCatalog()
+    .filter(
+      (item) =>
+        item.id !== idStr &&
+        (item.category || "").toLowerCase().includes(cat),
+    )
+    .slice(0, 8)
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      minPrice: item.minPrice,
+      maxPrice: item.maxPrice,
+      imageUrl: item.imageUrl ?? "",
+      category: item.category,
+      tags: normalizeTags(item.tags),
+    }));
 }
 
 export default async function ProductDetailPage({

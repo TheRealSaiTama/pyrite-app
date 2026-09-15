@@ -11,77 +11,29 @@ import CashBackBottom from "@/components/sections/cash-back-bottom";
 import ServicesSection from "@/components/sections/services";
 import Footer from "@/components/sections/footer";
 import CorporateShowcase from "@/components/sections/corporate-showcase";
-import { prisma } from '@/lib/prisma';
-import { getStorefrontData } from "@/lib/site";
+import { getStorefrontData, getPageSections } from "@/lib/site";
 import {
-  mapEnabledSections,
   filterLiveCatalog,
   parseCustomTabs,
   normalizeTabProductIds,
 } from "@/lib/cms/mappers";
-import { getLocalCatalog } from "@/lib/local-catalog";
+import { cmsCatalog, cmsItemByIdOrSlug } from "@/lib/cms/load";
 
 export const revalidate = 0;
 
-const catalogSelect = {
-  id: true,
-  name: true,
-  description: true,
-  minPrice: true,
-  maxPrice: true,
-  imageUrl: true,
-  category: true,
-  tags: true,
-  enabled: true,
-  featured: true,
-} as const;
-
 async function getCatalog() {
-  try {
-    const [products, diaries] = await Promise.all([
-      prisma.product
-        .findMany({ select: catalogSelect })
-        .catch((e) => {
-          console.error("home getCatalog products failed", e);
-          return [] as any[];
-        }),
-      prisma.diary
-        .findMany({ select: catalogSelect })
-        .catch((e) => {
-          console.error("home getCatalog diaries failed", e);
-          return [] as any[];
-        }),
-    ]);
-    const live = filterLiveCatalog([...products, ...diaries] as any[]);
-    const mapped = (JSON.parse(JSON.stringify(live)) as any[]).map((row) => ({
-      ...row,
-      id: String(row.id),
-    }));
-    if (mapped.length) return mapped;
-  } catch (e) {
-    console.error("home getCatalog failed", e);
-  }
-  const local = getLocalCatalog();
-  return [...local.products, ...local.diaries];
+  const live = filterLiveCatalog(cmsCatalog() as any[]);
+  return live.map((row) => ({
+    ...row,
+    id: String(row.id),
+    minPrice: row.minPrice,
+    maxPrice: row.maxPrice,
+    imageUrl: row.imageUrl,
+  }));
 }
 
 async function getHomeSections() {
-  try {
-    const sections = await prisma.pageSection.findMany({
-      where: { pageKey: "home" },
-      orderBy: { sortOrder: "asc" },
-    });
-    return mapEnabledSections(
-      sections.map((s) => ({
-        sectionKey: s.sectionKey,
-        enabled: s.enabled,
-        content: s.content,
-        sortOrder: s.sortOrder,
-      })),
-    );
-  } catch (e) {
-    console.error("home getHomeSections failed", e);
-  }
+  const sections = await getPageSections("home");
   return {
     hero: {},
     about: {},
@@ -97,6 +49,7 @@ async function getHomeSections() {
     cashback_bottom: {},
     services: {},
     corporate_showcase: {},
+    ...sections,
   };
 }
 
@@ -121,25 +74,12 @@ async function hydrateCatalogPicks(catalog: any[], sections: Record<string, any>
   const have = new Set(catalog.map((r) => String(r.id).toLowerCase()));
   const missing = wanted.filter((id) => !have.has(id.toLowerCase()));
   if (!missing.length) return catalog;
-
-  try {
-    const [extraProducts, extraDiaries] = await Promise.all([
-      prisma.product
-        .findMany({ where: { id: { in: missing } }, select: catalogSelect })
-        .catch(() => [] as any[]),
-      prisma.diary
-        .findMany({ where: { id: { in: missing } }, select: catalogSelect })
-        .catch(() => [] as any[]),
-    ]);
-    const extra = filterLiveCatalog(
-      JSON.parse(JSON.stringify([...extraProducts, ...extraDiaries])) as any[],
-    ).map((row: any) => ({ ...row, id: String(row.id) }));
-    if (!extra.length) return catalog;
-    return [...catalog, ...extra];
-  } catch (e) {
-    console.error("home hydrateCatalogPicks failed", e);
-    return catalog;
-  }
+  const extra = missing
+    .map((id) => cmsItemByIdOrSlug(id))
+    .filter(Boolean)
+    .map((row: any) => ({ ...row, id: String(row.id) }));
+  if (!extra.length) return catalog;
+  return [...catalog, ...extra];
 }
 
 export default async function HomePage() {

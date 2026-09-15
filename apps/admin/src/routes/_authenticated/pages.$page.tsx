@@ -50,13 +50,15 @@ const HOME_SECTION_KEYS = [
 const PAGE_PREVIEW_PATHS: Record<string, string> = {
   home: "/",
   shop: "/shop",
-  product: "/products",
+  product: "/shop",
+  "custom-design": "/custom-design",
 };
 
 const PAGE_TITLES: Record<string, { title: string; description: string }> = {
   home: { title: "Home page", description: "Every section on the storefront home page — expand to edit copy and swap images." },
   shop: { title: "Shop page", description: "Copy shown around the product grid." },
   product: { title: "Product template", description: "Copy shared by every product detail page." },
+  "custom-design": { title: "Custom design page", description: "Technique copy, images, and headings on /custom-design." },
 };
 
 export const Route = createFileRoute("/_authenticated/pages/$page")({

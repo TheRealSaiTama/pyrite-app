@@ -705,6 +705,22 @@ export const seedHomeSections = createServerFn({ method: "POST" })
           quote_cta: "Request Quote",
         },
       },
+      {
+        page_key: "custom-design",
+        section_key: "main",
+        title: "Custom design page",
+        sort_order: 10,
+        content: {
+          heading: "Custom Design",
+          techniques: [
+            { title: "Thermal Logo Debossing", body: "Debossing or blind debossing is the undisputed favourite among logo debossings.", image_url: "/custom-design/thermal-debossing.jpg" },
+            { title: "Colour Debossing", body: "A colour debossing works like blind debossing, with a thin coloured foil transferred to the cover.", image_url: "/custom-design/colour-debossing.jpg" },
+            { title: "Metallic Debossing", body: "Hot foil embossing in gold or silver.", image_url: "/custom-design/metallic-debossing.jpg" },
+            { title: "Laser Cut / Punching", body: "Digitally controlled cutting for delicate motifs.", image_url: "/custom-design/laser-cut.jpg" },
+            { title: "Magnetic Flap", body: "Metal clasps in various shapes, sizes and colours.", image_url: "/custom-design/magnetic-flap.jpg" },
+          ],
+        },
+      },
     ];
 
     for (const section of extraPages) {

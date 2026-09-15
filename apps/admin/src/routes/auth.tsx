@@ -22,6 +22,7 @@ function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const configured = isSupabaseConfigured();
+  const localCms = typeof window !== "undefined" && /\/api\/cms/.test(String((import.meta as any).env?.VITE_SUPABASE_URL || ""));
 
   useEffect(() => {
     if (!configured) return;
@@ -72,6 +73,12 @@ function AuthPage() {
             Every text, image, product and setting on your storefront — one calm,
             labeled panel. Sign in to keep the shelves tidy.
           </p>
+          {localCms && (
+            <p className="text-xs text-muted-foreground border border-border rounded-md px-3 py-2">
+              Local CMS mode: any email + password signs you in. Edits save to the
+              storefront file and show on http://localhost:3000.
+            </p>
+          )}
         </div>
         <p className="text-xs text-muted-foreground">
           © Pyrite · Internal tool

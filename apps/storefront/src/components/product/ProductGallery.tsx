@@ -30,7 +30,7 @@ export default function ProductGallery({ imageUrl, productName, gallery }: Produ
     <div className="space-y-4">
       <div className="relative aspect-square bg-white rounded-xl overflow-hidden border border-gray-200 group">
         <div className="absolute left-3 top-3 bottom-3 flex flex-col gap-2 z-10">
-          <div className="bg-[#1a5f7a] text-white text-xs font-bold px-2.5 py-10 rounded-lg shadow-lg">
+          <div className="bg-[#0F172A] text-white text-xs font-bold px-2.5 py-10 rounded-lg shadow-lg">
             <div className="writing-mode-vertical text-center tracking-[0.15em]">
               EXECUTIVE SIZE
             </div>
@@ -80,7 +80,7 @@ export default function ProductGallery({ imageUrl, productName, gallery }: Produ
             }}
             className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
               selectedImage === idx
-                ? 'border-[#1a5f7a] shadow-md ring-2 ring-[#1a5f7a]/20'
+                ? 'border-[#0F172A] shadow-md ring-2 ring-[#0F172A]/20'
                 : 'border-gray-200 hover:border-gray-300 opacity-60 hover:opacity-100'
             }`}
           >

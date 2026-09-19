@@ -130,7 +130,7 @@ export default function RelatedProducts({ products, heading }: RelatedProductsPr
                       <p className="text-sm font-semibold text-gray-700">On Request</p>
                     )}
                   </div>
-                  <button className="w-full mt-3 bg-white border border-[#1a5f7a] text-[#1a5f7a] hover:bg-[#1a5f7a] hover:text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+                  <button className="w-full mt-3 bg-white border border-[#0F172A] text-[#0F172A] hover:bg-[#0F172A] hover:text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm">
                     View Details
                   </button>
                 </div>

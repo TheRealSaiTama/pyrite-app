@@ -7,7 +7,7 @@ import { useSelectedProducts } from '@/context/ProductContext';
 import { pickVisibleFeatures } from "@/lib/cms/mappers";
 
 const TAG_VARIANTS = [
-  { accent: '#1a5f7a', bg: 'bg-[#1a5f7a]/[0.03]', border: 'border-[#1a5f7a]/20' },
+  { accent: '#0F172A', bg: 'bg-[#0F172A]/[0.03]', border: 'border-[#0F172A]/20' },
   { accent: '#7c2d12', bg: 'bg-[#7c2d12]/[0.03]', border: 'border-[#7c2d12]/20' },
   { accent: '#15803d', bg: 'bg-[#15803d]/[0.03]', border: 'border-[#15803d]/20' },
   { accent: '#6b21a8', bg: 'bg-[#6b21a8]/[0.03]', border: 'border-[#6b21a8]/20' },
@@ -172,7 +172,7 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
           </div>
           <span className="text-sm text-gray-600">0 Review(s)</span>
           <span className="text-gray-400">|</span>
-          <button className="text-sm text-[#1a5f7a] hover:underline">
+          <button className="text-sm text-[#0F172A] hover:underline">
             Write a review
           </button>
         </div>
@@ -271,7 +271,7 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
           <DialogTrigger asChild>
             <button
               onClick={handleEnquire}
-              className="w-full bg-[#1a5f7a] hover:bg-[#1a5f7a]/90 text-white font-semibold py-4 px-8 rounded-lg transition-colors duration-200 text-base"
+              className="w-full bg-[#0F172A] hover:bg-[#1E293B] text-white font-semibold py-4 px-8 rounded-lg transition-colors duration-200 text-base shadow-sm hover:shadow-md"
             >
               {enquiryCta}
             </button>
@@ -296,7 +296,7 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
           </DialogContent>
         </Dialog>
 
-        <button className="w-full mt-3 bg-white border-2 border-[#1a5f7a] text-[#1a5f7a] hover:bg-gray-50 font-semibold py-4 px-8 rounded-lg transition-colors duration-200 text-base">
+        <button className="w-full mt-3 bg-white border-2 border-[#0F172A] text-[#0F172A] hover:bg-[#0F172A] hover:text-white font-semibold py-4 px-8 rounded-lg transition-colors duration-200 text-base">
           {quoteCta}
         </button>
       </div>

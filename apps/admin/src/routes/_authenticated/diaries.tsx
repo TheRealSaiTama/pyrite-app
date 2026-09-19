@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { MediaPicker } from "@/components/admin/media-picker";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, BookOpen } from "lucide-react";
+import { AdminProductImage } from "@/lib/image";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/diaries")({
@@ -93,7 +94,11 @@ function DiariesPage() {
             {!isLoading && filtered.length === 0 && <tr><td colSpan={7} className="py-10 text-center text-muted-foreground">No diaries yet.</td></tr>}
             {filtered.map((d) => (
               <tr key={d.id} className="border-b border-border last:border-0 hover:bg-surface/60">
-                <td className="px-4 py-2.5"><div className="h-9 w-9 rounded bg-surface-2 overflow-hidden">{d.image_url && <img src={d.image_url} alt="" className="h-full w-full object-cover" />}</div></td>
+                <td className="px-4 py-2.5">
+                  <div className="h-9 w-9 rounded bg-surface-2 overflow-hidden flex items-center justify-center border border-border shrink-0">
+                    <AdminProductImage src={d.image_url} alt={d.name} fallbackIcon={BookOpen} />
+                  </div>
+                </td>
                 <td className="px-2 py-2.5"><div className="font-medium">{d.name}</div><div className="text-xs text-muted-foreground font-mono">/{d.slug}</div></td>
                 <td className="px-2 py-2.5 text-muted-foreground">{d.size ?? "—"}</td>
                 <td className="px-2 py-2.5 text-muted-foreground">{d.cover_type ?? "—"}</td>

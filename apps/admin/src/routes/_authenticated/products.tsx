@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { MediaPicker, MediaGrid, uploadFileToBucket } from "@/components/admin/media-picker";
+import { AdminProductImage } from "@/lib/image";
 import {
   Plus, Pencil, Trash2, Search, Star, ChevronRight, Home,
   Folder, FolderOpen, ArrowLeft, BookOpen, Package, Copy
@@ -812,7 +813,11 @@ function ProductsPage() {
                     <td className="px-4 py-2.5">
                       <div className="h-9 w-9 rounded bg-surface-2 overflow-hidden flex items-center justify-center border border-border">
                         {item.image_url ? (
-                          <img src={item.image_url} alt="" className="h-full w-full object-cover" />
+                          <AdminProductImage
+                            src={item.image_url}
+                            alt={item.name}
+                            fallbackIcon={item.type === "diary" ? BookOpen : Package}
+                          />
                         ) : item.type === "diary" ? (
                           <BookOpen className="h-4 w-4 text-muted-foreground" />
                         ) : (
@@ -1780,8 +1785,7 @@ function SecondaryImagesField({
             key={`${url}-${i}`}
             className="relative aspect-square rounded-md border border-border bg-surface-2 overflow-hidden group"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt="" className="h-full w-full object-cover" />
+            <AdminProductImage src={url} alt="" />
             <button
               type="button"
               title="Remove image"

@@ -13,6 +13,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Search, X, Plus, Package } from "lucide-react";
+import { AdminProductImage } from "@/lib/image";
 
 type PickerItem = { productId: string };
 
@@ -121,12 +122,7 @@ export function ProductPicker({
               className="flex items-center gap-3 rounded-md border border-border bg-surface/60 p-2"
             >
               <div className="h-12 w-12 rounded bg-surface-2 overflow-hidden flex items-center justify-center border border-border shrink-0">
-                {p.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
-                ) : (
-                  <Package className="h-5 w-5 text-muted-foreground" />
-                )}
+                <AdminProductImage src={p.image_url} alt={p.name} fallbackIcon={Package} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">{p.name}</div>
@@ -200,12 +196,7 @@ export function ProductPicker({
                   className="flex items-center gap-3 p-2.5"
                 >
                   <div className="h-10 w-10 rounded bg-surface-2 overflow-hidden flex items-center justify-center border border-border shrink-0">
-                    {p.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                    )}
+                    <AdminProductImage src={p.image_url} alt={p.name} fallbackIcon={Package} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{p.name}</div>

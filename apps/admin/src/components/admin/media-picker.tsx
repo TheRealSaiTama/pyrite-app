@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, ImageIcon, Upload, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { AdminProductImage } from "@/lib/image";
 
 const BUCKET = "site-media";
 
@@ -89,8 +90,7 @@ export function MediaPicker({
     <div className="flex items-start gap-3">
       <div className="h-20 w-20 rounded-md bg-surface-2 overflow-hidden flex items-center justify-center border border-border shrink-0 relative">
         {value ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={value} alt="" className="h-full w-full object-cover" />
+          <AdminProductImage src={value} alt="" />
         ) : (
           <ImageIcon className="h-7 w-7 text-muted-foreground" />
         )}
@@ -210,8 +210,7 @@ export function MediaGrid({
             onClick={() => onPick?.(asset.url, asset)}
             className="block w-full aspect-square rounded overflow-hidden border border-border hover:border-primary transition-colors"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={asset.url} alt={asset.alt || ""} className="w-full h-full object-cover" />
+            <AdminProductImage src={asset.url} alt={asset.alt || ""} />
           </button>
           {onDelete && (
             <Button

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProductGallery from "@/components/product/ProductGallery";
 import ProductInfo from "@/components/product/ProductInfo";
+import ProductReviewsAndTags from "@/components/product/ProductReviewsAndTags";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import { getStorefrontData, getProductChrome } from "@/lib/site";
 import { cmsItemByIdOrSlug, cmsCatalog } from "@/lib/cms/load";
@@ -147,6 +148,13 @@ export default async function ProductDetailPage({
           />
           <ProductInfo product={product} chrome={chrome} />
         </div>
+
+        {/* Selectable Customer Reviews & Product Tags Section */}
+        <ProductReviewsAndTags
+          productId={product.id}
+          productName={product.name}
+          tags={product.tags}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-12 border-t border-gray-100">
           <div className="flex flex-col items-center text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl">

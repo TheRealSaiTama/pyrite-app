@@ -5,12 +5,7 @@ import { Minus, Plus, ShoppingCart, Heart, Check } from 'lucide-react';
 import { useCart } from '@/context/ProductContext';
 import { pickVisibleFeatures } from "@/lib/cms/mappers";
 
-const TAG_VARIANTS = [
-  { accent: '#0F172A', bg: 'bg-[#0F172A]/[0.03]', border: 'border-[#0F172A]/20' },
-  { accent: '#7c2d12', bg: 'bg-[#7c2d12]/[0.03]', border: 'border-[#7c2d12]/20' },
-  { accent: '#15803d', bg: 'bg-[#15803d]/[0.03]', border: 'border-[#15803d]/20' },
-  { accent: '#6b21a8', bg: 'bg-[#6b21a8]/[0.03]', border: 'border-[#6b21a8]/20' },
-];
+
 
 interface Product {
   id: string | number;
@@ -65,17 +60,7 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
     }
   }, [cartItem, moq]);
 
-  const tags = useMemo(() => {
-    if (!product.tags) return [] as string[];
-    if (Array.isArray(product.tags)) {
-      return product.tags.filter(Boolean);
-    }
 
-    return product.tags
-      .split(',')
-      .map((tag) => tag.replace(/\s+/g, ' ').trim())
-      .filter(Boolean);
-  }, [product.tags]);
 
   const generateSKU = (id: string | number) => {
     return `71 ${id.toString().slice(-6).toUpperCase()} OP | LEATHER`;
@@ -174,12 +159,13 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
           </div>
           <span className="text-sm text-gray-600">0 Review(s)</span>
           <span className="text-gray-400">|</span>
-          <button className="text-sm text-[#0F172A] hover:underline">
+          <a href="#reviews-section" className="text-sm text-[#0F172A] hover:underline cursor-pointer">
             Write a review
-          </button>
+          </a>
         </div>
 
-        <div className="mb-8 pb-6 border-b border-gray-200">
+        {/* Our Price */}
+        <div className="mb-6">
           <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Our Price</p>
           {typeof product.minPrice === 'number' && product.minPrice !== null ? (
             <div className="flex items-baseline gap-2">
@@ -191,73 +177,10 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
           ) : (
             <p className="text-3xl font-bold text-gray-700">Price on Request</p>
           )}
-          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-md text-xs font-semibold text-amber-800">
-            <span>Minimum Order Quantity (MOQ):</span>
-            <span className="font-bold">{moq} units</span>
-          </div>
         </div>
 
-        {tags.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-[0.65rem] uppercase tracking-[0.25em] font-medium text-gray-400 mb-4">
-              Tags
-            </h2>
-            <div className="flex flex-wrap gap-2.5">
-              {tags.map((tag, index) => {
-                const variant = TAG_VARIANTS[index % TAG_VARIANTS.length];
-                return (
-                  <span
-                    key={`${tag}-${index}`}
-                    className={`group inline-flex items-center gap-2 ${variant.bg} ${variant.border} border px-4 py-2 rounded-sm transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5`}
-                  >
-                    <span
-                      className="w-1 h-1 rounded-full transition-transform duration-200 group-hover:scale-125"
-                      style={{ backgroundColor: variant.accent }}
-                      aria-hidden
-                    />
-                    <span className="text-[0.8125rem] font-medium text-gray-700 tracking-tight">
-                      {tag}
-                    </span>
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {highlights && (
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Product Highlights</h2>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-line text-base">
-              {highlights}
-            </p>
-          </div>
-        )}
-
-        {specifications.length > 0 && (
-          <div className="mb-8 bg-gray-50 rounded-lg p-6">
-            <div className="divide-y divide-gray-200">
-              {specifications.map((spec, idx) => (
-                <div key={idx} className="grid grid-cols-3 gap-4 py-3">
-                  <dt className="text-sm font-semibold text-gray-700">{spec.label} :</dt>
-                  <dd className="text-sm text-gray-900 col-span-2">{spec.value}</dd>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {notes.length > 0 && (
-          <div className="space-y-2 mb-6">
-            {notes.map((note, idx) => (
-              <p key={idx} className="text-xs text-red-600">
-                {note}
-              </p>
-            ))}
-          </div>
-        )}
-
-        <div className="space-y-4 pt-4 border-t border-gray-100">
+        {/* Quantity, Add to Cart & Wishlist right below price */}
+        <div className="space-y-4 pb-8 mb-8 border-b border-gray-200">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <span className="text-sm font-semibold text-gray-700 min-w-[80px]">
               Quantity:
@@ -298,7 +221,7 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row gap-3 pt-1">
             <button
               type="button"
               disabled={isInCart}
@@ -357,6 +280,38 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
             </p>
           )}
         </div>
+
+        {highlights && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Product Highlights</h2>
+            <p className="text-gray-700 leading-relaxed whitespace-pre-line text-base">
+              {highlights}
+            </p>
+          </div>
+        )}
+
+        {specifications.length > 0 && (
+          <div className="mb-8 bg-gray-50 rounded-lg p-6">
+            <div className="divide-y divide-gray-200">
+              {specifications.map((spec, idx) => (
+                <div key={idx} className="grid grid-cols-3 gap-4 py-3">
+                  <dt className="text-sm font-semibold text-gray-700">{spec.label} :</dt>
+                  <dd className="text-sm text-gray-900 col-span-2">{spec.value}</dd>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {notes.length > 0 && (
+          <div className="space-y-2 mb-6">
+            {notes.map((note, idx) => (
+              <p key={idx} className="text-xs text-red-600">
+                {note}
+              </p>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -111,7 +111,7 @@ export default function CartClient({
                 {cart.map((item) => {
                   const imageUrl = resolveProductImage(item.image);
                   const lineTotal = item.price * item.quantity;
-                  const itemMoq = item.moq || 100;
+                  const itemMoq = item.moq || 50;
 
                   return (
                     <div

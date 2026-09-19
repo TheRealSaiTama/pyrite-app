@@ -50,7 +50,33 @@ function asSettings(row: CmsRow | undefined): SiteSettingsOut {
   });
 }
 
+function parseFeatures(raw: unknown): Record<string, any> {
+  if (!raw) return {};
+  if (typeof raw === "object") return raw as Record<string, any>;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return typeof parsed === "object" && parsed !== null ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function parseMoq(row: CmsRow): number {
+  const feat = parseFeatures(row.features);
+  const raw = row.moq ?? feat?.moq?.value ?? feat?.moq ?? feat?.MOQ?.value ?? feat?.MOQ;
+  if (raw != null) {
+    const num = Number(raw);
+    if (Number.isFinite(num) && num > 0) return num;
+  }
+  return 50;
+}
+
 function asCatalog(row: CmsRow, source: "product" | "diary"): CatalogItem {
+  const features = parseFeatures(row.features);
+  const moq = parseMoq(row);
   return {
     id: String(row.id),
     slug: String(row.slug || ""),
@@ -62,13 +88,13 @@ function asCatalog(row: CmsRow, source: "product" | "diary"): CatalogItem {
     category: row.category ?? null,
     tags: Array.isArray(row.tags) ? row.tags.map(String) : [],
     gallery: Array.isArray(row.gallery) ? row.gallery.map(String) : [],
-    features: row.features && typeof row.features === "object" ? row.features : {},
+    features,
     enabled: row.enabled !== false,
     featured: row.featured === true,
     seoTitle: row.seo_title ?? row.seoTitle ?? null,
     seoDescription: row.seo_description ?? row.seoDescription ?? null,
     source,
-    moq: Number(row.moq ?? (row.features as any)?.moq?.value ?? (row.features as any)?.moq ?? 100) || 100,
+    moq,
   };
 }
 

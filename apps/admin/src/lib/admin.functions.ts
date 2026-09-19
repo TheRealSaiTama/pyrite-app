@@ -163,6 +163,7 @@ const productShape = z.object({
   features: z.record(z.object({ show: z.boolean(), value: z.string() })).default({}),
   seo_title: z.string().nullable(),
   seo_description: z.string().nullable(),
+  moq: z.number().int().nullable().optional(),
 });
 
 export const saveProduct = createServerFn({ method: "POST" })
@@ -172,19 +173,34 @@ export const saveProduct = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (data.id) {
-      const { error } = await context.supabase.from("products").update(data.values).eq("id", data.id);
+      let { error } = await context.supabase.from("products").update(data.values).eq("id", data.id);
+      if (error && error.message?.includes("column \"moq\" of relation \"products\" does not exist")) {
+        const { moq: _, ...safeValues } = data.values as any;
+        const res = await context.supabase.from("products").update(safeValues).eq("id", data.id);
+        error = res.error;
+      }
       if (error) throw new Error(error.message);
       await notifyStorefront(["/", "/shop", `/shop/${data.id}`, `/shop/${data.values.slug}`]);
       return { ok: true, id: data.id };
     }
-    const { data: row, error } = await context.supabase
+    let { data: row, error } = await context.supabase
       .from("products")
       .insert(data.values)
       .select("id")
       .single();
+    if (error && error.message?.includes("column \"moq\" of relation \"products\" does not exist")) {
+      const { moq: _, ...safeValues } = data.values as any;
+      const res = await context.supabase
+        .from("products")
+        .insert(safeValues)
+        .select("id")
+        .single();
+      row = res.data;
+      error = res.error;
+    }
     if (error) throw new Error(error.message);
-    await notifyStorefront(["/", "/shop", `/shop/${row.id}`]);
-    return { ok: true, id: row.id };
+    await notifyStorefront(["/", "/shop", `/shop/${row?.id || ""}`]);
+    return { ok: true, id: row?.id };
   });
 
 export const deleteProduct = createServerFn({ method: "POST" })
@@ -216,6 +232,7 @@ const diaryShape = z.object({
   features: z.record(z.object({ show: z.boolean(), value: z.string() })).default({}),
   seo_title: z.string().nullable(),
   seo_description: z.string().nullable(),
+  moq: z.number().int().nullable().optional(),
 });
 
 export const saveDiary = createServerFn({ method: "POST" })
@@ -225,19 +242,34 @@ export const saveDiary = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (data.id) {
-      const { error } = await context.supabase.from("diaries").update(data.values).eq("id", data.id);
+      let { error } = await context.supabase.from("diaries").update(data.values).eq("id", data.id);
+      if (error && error.message?.includes("column \"moq\" of relation \"diaries\" does not exist")) {
+        const { moq: _, ...safeValues } = data.values as any;
+        const res = await context.supabase.from("diaries").update(safeValues).eq("id", data.id);
+        error = res.error;
+      }
       if (error) throw new Error(error.message);
       await notifyStorefront(["/", "/shop", `/shop/${data.id}`, `/shop/${data.values.slug}`]);
       return { ok: true, id: data.id };
     }
-    const { data: row, error } = await context.supabase
+    let { data: row, error } = await context.supabase
       .from("diaries")
       .insert(data.values)
       .select("id")
       .single();
+    if (error && error.message?.includes("column \"moq\" of relation \"diaries\" does not exist")) {
+      const { moq: _, ...safeValues } = data.values as any;
+      const res = await context.supabase
+        .from("diaries")
+        .insert(safeValues)
+        .select("id")
+        .single();
+      row = res.data;
+      error = res.error;
+    }
     if (error) throw new Error(error.message);
-    await notifyStorefront(["/", "/shop", `/shop/${row.id}`]);
-    return { ok: true, id: row.id };
+    await notifyStorefront(["/", "/shop", `/shop/${row?.id || ""}`]);
+    return { ok: true, id: row?.id };
   });
 
 export const deleteDiary = createServerFn({ method: "POST" })

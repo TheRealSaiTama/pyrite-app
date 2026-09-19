@@ -122,7 +122,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     },
     quantity?: number,
   ) => {
-    const moq = Math.max(1, Number(item.moq) || 100);
+    const moq = Math.max(1, Number(item.moq) || 50);
     const qty = Math.max(moq, Number(quantity) || moq);
 
     setCart((prev) => {
@@ -131,6 +131,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         const next = [...prev];
         next[index] = {
           ...next[index],
+          moq,
           quantity: next[index].quantity + qty,
         };
         return next;
@@ -155,7 +156,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     setCart((prev) =>
       prev.map((item) => {
         if (String(item.id) !== String(id)) return item;
-        const validQty = Math.max(item.moq, quantity);
+        const validQty = Math.max(item.moq || 1, quantity);
         return { ...item, quantity: validQty };
       }),
     );

@@ -100,7 +100,7 @@ const empty: CatalogItem = {
   description: "",
   min_price: null,
   max_price: null,
-  moq: 100,
+  moq: 50,
   category: "",
   tags: [],
   image_url: "",
@@ -773,7 +773,8 @@ function ProductsPage() {
                   <th className="px-4 py-2.5 w-14"></th>
                   <th className="px-2 py-2.5">Product / Diary</th>
                   <th className="px-2 py-2.5">Category</th>
-                  <th className="px-2 py-2.5">Price range</th>
+                  <th className="px-2 py-2.5">Price</th>
+                  <th className="px-2 py-2.5">MOQ</th>
                   <th className="px-2 py-2.5">Type</th>
                   <th className="px-2 py-2.5">Status</th>
                   <th className="px-4 py-2.5 w-28 text-right">Actions</th>
@@ -782,14 +783,14 @@ function ProductsPage() {
               <tbody>
                 {isLoading && (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-muted-foreground">
+                    <td colSpan={8} className="py-10 text-center text-muted-foreground">
                       Loading items…
                     </td>
                   </tr>
                 )}
                 {!isLoading && filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-muted-foreground">
+                    <td colSpan={8} className="py-10 text-center text-muted-foreground">
                       <div className="flex flex-col items-center gap-3">
                         <span>
                           {search
@@ -829,8 +830,15 @@ function ProductsPage() {
                     <td className="px-2 py-2.5 text-muted-foreground text-xs max-w-[200px] truncate">
                       {item.category ?? "—"}
                     </td>
-                    <td className="px-2 py-2.5 font-mono text-xs">
+                    <td className="px-2 py-2.5 font-mono text-xs font-semibold">
                       {item.min_price != null ? `₹${item.min_price}` : "—"}
+                    </td>
+                    <td className="px-2 py-2.5 font-mono text-xs text-muted-foreground">
+                      {(() => {
+                        const rawF = typeof item.features === "string" ? JSON.parse(item.features || "{}") : item.features || {};
+                        const val = rawF?.moq?.value ?? rawF?.moq ?? item.moq;
+                        return val ? `${val} pcs` : "50 pcs";
+                      })()}
                     </td>
                     <td className="px-2 py-2.5">
                       {item.type === "diary" ? (
@@ -1078,12 +1086,17 @@ function ProductForm({
         .map((g) => (typeof g === "string" ? g : g?.url))
         .filter((u): u is string => typeof u === "string" && u.length > 0);
     }
-    const moqVal = Number((product.features as any)?.moq?.value ?? (product as any).moq ?? 100);
+    const rawFeatures = typeof (product as any).features === "string"
+      ? JSON.parse((product as any).features || "{}")
+      : (product as any).features || {};
+    const rawMoq = rawFeatures?.moq?.value ?? rawFeatures?.moq ?? (product as any).moq;
+    const parsedMoq = rawMoq != null ? Number(rawMoq) : 50;
+    const moqVal = Number.isFinite(parsedMoq) && parsedMoq > 0 ? parsedMoq : 50;
     return {
       ...empty,
       ...product,
       gallery,
-      moq: Number.isFinite(moqVal) && moqVal > 0 ? moqVal : 100,
+      moq: moqVal,
       category: product.category || defaultCategory || "",
       tags:
         product.tags && product.tags.length > 0
@@ -1116,9 +1129,13 @@ function ProductForm({
     setSaving(true);
     try {
       const price = values.min_price;
-      const moqFeature = { show: true, value: String(values.moq || 100) };
+      const moqNum = Math.max(1, Number(values.moq) || 50);
+      const moqFeature = { show: true, value: String(moqNum) };
+      const currentFeatures = typeof values.features === "string"
+        ? JSON.parse(values.features || "{}")
+        : values.features || {};
       const updatedFeatures = {
-        ...(values.features || {}),
+        ...currentFeatures,
         moq: moqFeature,
       };
 
@@ -1145,6 +1162,7 @@ function ProductForm({
               features: updatedFeatures,
               seo_title: values.seo_title || null,
               seo_description: values.seo_description || null,
+              moq: moqNum,
             },
           },
         });
@@ -1167,6 +1185,7 @@ function ProductForm({
               features: updatedFeatures,
               seo_title: values.seo_title || null,
               seo_description: values.seo_description || null,
+              moq: moqNum,
             },
           },
         });
@@ -1378,12 +1397,23 @@ function ProductForm({
           <Input
             type="number"
             min={1}
-            value={values.moq ?? 100}
+            value={values.moq === null || values.moq === undefined ? "" : values.moq}
             onChange={(e) => {
-              const val = Math.max(1, Number(e.target.value) || 100);
-              set("moq", val);
+              const raw = e.target.value;
+              if (raw === "") {
+                set("moq", "" as any);
+              } else {
+                const val = parseInt(raw, 10);
+                set("moq", isNaN(val) ? ("" as any) : Math.max(1, val));
+              }
             }}
-            placeholder="e.g. 100"
+            onBlur={() => {
+              const current = Number(values.moq);
+              if (!Number.isFinite(current) || current < 1) {
+                set("moq", 50);
+              }
+            }}
+            placeholder="e.g. 50"
             className="mt-1.5"
           />
         </div>

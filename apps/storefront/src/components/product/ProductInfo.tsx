@@ -45,20 +45,25 @@ function specsFromFeatures(
 }
 
 export default function ProductInfo({ product, chrome }: ProductInfoProps) {
-  const moq = Math.max(1, Number(product.moq) || 100);
+  const moq = Math.max(1, Number(product.moq) || 50);
   const { cart, addToCart, toggleFavourite, isFavourite } = useCart();
   const isFav = isFavourite(product.id);
 
   const cartItem = cart.find((item) => String(item.id) === String(product.id));
   const isInCart = Boolean(cartItem);
 
-  const [quantity, setQuantity] = useState<number>(moq);
+  const [quantity, setQuantity] = useState<number>(() => {
+    if (cartItem && cartItem.quantity) return cartItem.quantity;
+    return moq;
+  });
 
   useEffect(() => {
     if (cartItem && cartItem.quantity) {
       setQuantity(cartItem.quantity);
+    } else {
+      setQuantity(moq);
     }
-  }, [cartItem]);
+  }, [cartItem, moq]);
 
   const tags = useMemo(() => {
     if (!product.tags) return [] as string[];

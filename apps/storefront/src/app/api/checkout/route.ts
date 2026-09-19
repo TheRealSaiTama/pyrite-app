@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
                 (item: any) => `
               <tr>
                 <td><strong>${item.name}</strong></td>
-                <td style="text-align: center;">${item.moq || 100}</td>
+                <td style="text-align: center;">${item.moq || 50}</td>
                 <td style="text-align: right;">₹${Number(item.price).toLocaleString()}</td>
                 <td style="text-align: center;">${item.quantity}</td>
                 <td style="text-align: right;"><strong>₹${(Number(item.price) * Number(item.quantity)).toLocaleString()}</strong></td>

@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Diary, Product } from '@prisma/client';
-import type { Product as ProductType } from '@/types/Product';
-import { useSelectedProducts } from '@/context/ProductContext';
 import { resolveProductImage, isRemoteOrDataImage } from "@/lib/product-image";
 
 type ShopProduct = {
@@ -315,11 +313,6 @@ export default function ShopClient({
                 {heading} ({results.length})
               </h1>
               <div className="flex items-center gap-4">
-                <DialogTrigger asChild>
-                  <button className="px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition-colors">
-                    Enquire ({selectedProducts.length})
-                  </button>
-                </DialogTrigger>
                 <select
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary min-w-[180px]"
                   onChange={handleSortChange}

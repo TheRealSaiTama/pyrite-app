@@ -36,7 +36,12 @@ export function resolveProductImage(raw: string | null | undefined): string {
     return `https://drive.google.com/thumbnail?id=${driveId}&sz=w1000`;
   }
 
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("/") ||
+    url.startsWith("data:")
+  ) {
     return url;
   }
 

@@ -6,6 +6,7 @@ import {
   isCmsTable,
   mutateCms,
   readCms,
+  dataDir,
   LOCAL_OWNER_ID,
   type CmsRow,
 } from "@/lib/cms/local-store";
@@ -183,6 +184,14 @@ async function handleRest(req: NextRequest, table: string) {
     mutateCms((db) => {
       for (const item of items) {
         if (!item) continue;
+        if (table === "media_assets" && item.path) {
+          const existing = (db.media_assets || []).find((m) => m.path === item.path);
+          if (existing) {
+            Object.assign(existing, item, { updated_at: new Date().toISOString() });
+            inserted.push(existing);
+            continue;
+          }
+        }
         const key = pk(table);
         if (item[key] == null) item[key] = crypto.randomUUID();
         item.created_at = item.created_at || new Date().toISOString();
@@ -226,42 +235,198 @@ async function handleRest(req: NextRequest, table: string) {
   return json({ error: "method not allowed" }, 405);
 }
 
+function getMimeType(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase();
+  switch (ext) {
+    case ".png":
+      return "image/png";
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".webp":
+      return "image/webp";
+    case ".gif":
+      return "image/gif";
+    case ".svg":
+      return "image/svg+xml";
+    case ".avif":
+      return "image/avif";
+    default:
+      return "application/octet-stream";
+  }
+}
+
 async function handleStorage(req: NextRequest, parts: string[]) {
+  // Support bucket management: /storage/v1/bucket or /storage/v1/bucket/{bucket}
+  if (parts[2] === "bucket") {
+    if (req.method === "GET") {
+      const bucketName = parts[3];
+      if (bucketName) {
+        return json({
+          id: bucketName,
+          name: bucketName,
+          public: true,
+          created_at: new Date().toISOString(),
+        });
+      }
+      return json([
+        { id: "site-media", name: "site-media", public: true, created_at: new Date().toISOString() },
+      ]);
+    }
+    if (req.method === "POST") {
+      const body = (await req.json().catch(() => ({}))) as { name?: string };
+      const name = body.name || "site-media";
+      return json({ name }, 200);
+    }
+    if (req.method === "DELETE") {
+      return json({ message: "Bucket deleted" }, 200);
+    }
+  }
+
   // /storage/v1/object/{bucket}/{...path} or /storage/v1/object/public/{bucket}/{...}
   const afterObject = parts[2] === "object" ? parts.slice(3) : parts.slice(2);
   const isPublic = afterObject[0] === "public";
   const rest = isPublic ? afterObject.slice(1) : afterObject;
   const bucket = rest[0] || "site-media";
   const objectPath = rest.slice(1).join("/");
-  if (req.method === "GET" || req.method === "HEAD") {
-    const dest = path.join(process.cwd(), "public", "cms-media", bucket, objectPath);
-    if (!fs.existsSync(dest)) return json({ error: "not found" }, 404);
-    const buf = fs.readFileSync(dest);
-    return new NextResponse(buf, {
-      status: 200,
-      headers: { ...CORS, "Content-Type": "application/octet-stream" },
+
+  // DELETE object(s)
+  if (req.method === "DELETE") {
+    let prefixes: string[] = [];
+    if (objectPath) {
+      prefixes = [objectPath];
+    } else {
+      const body = (await req.json().catch(() => ({}))) as { prefixes?: string[] };
+      prefixes = body.prefixes || [];
+    }
+
+    mutateCms((db) => {
+      const prefixSet = new Set(prefixes);
+      db.media_assets = (db.media_assets || []).filter((m) => {
+        const p = m.path || "";
+        const rel = p.startsWith(`${bucket}/`) ? p.slice(bucket.length + 1) : p;
+        return !prefixSet.has(p) && !prefixSet.has(rel);
+      });
     });
+
+    for (const prefix of prefixes) {
+      const diskPaths = [
+        path.join(dataDir(), "media", bucket, prefix),
+        path.join("/tmp", "pyrite-cms", "media", bucket, prefix),
+        path.join(process.cwd(), "public", "cms-media", bucket, prefix),
+      ];
+      for (const dp of diskPaths) {
+        try {
+          if (fs.existsSync(dp)) fs.unlinkSync(dp);
+        } catch {}
+      }
+    }
+    return json({ message: "Successfully deleted" }, 200);
   }
+
+  // GET or HEAD object
+  if (req.method === "GET" || req.method === "HEAD") {
+    // 1. Try reading from disk candidates
+    const diskCandidates = [
+      path.join(dataDir(), "media", bucket, objectPath),
+      path.join("/tmp", "pyrite-cms", "media", bucket, objectPath),
+      path.join(process.cwd(), "public", "cms-media", bucket, objectPath),
+    ];
+
+    for (const p of diskCandidates) {
+      if (fs.existsSync(p)) {
+        try {
+          const buf = fs.readFileSync(p);
+          const mime = getMimeType(objectPath);
+          return new NextResponse(buf, {
+            status: 200,
+            headers: {
+              ...CORS,
+              "Content-Type": mime,
+              "Cache-Control": "public, max-age=31536000, immutable",
+            },
+          });
+        } catch {}
+      }
+    }
+
+    // 2. Try looking up in database media_assets
+    const db = readCms();
+    const asset = (db.media_assets || []).find(
+      (m) =>
+        m.path === `${bucket}/${objectPath}` ||
+        m.path === objectPath ||
+        m.path?.endsWith(`/${objectPath}`) ||
+        m.url?.endsWith(`/${objectPath}`)
+    );
+
+    if (asset && asset.data_base64) {
+      const buf = Buffer.from(asset.data_base64, "base64");
+      const mime = asset.mime_type || getMimeType(objectPath);
+      // Cache to /tmp for fast future hits
+      try {
+        const tmpPath = path.join("/tmp", "pyrite-cms", "media", bucket, objectPath);
+        fs.mkdirSync(path.dirname(tmpPath), { recursive: true });
+        fs.writeFileSync(tmpPath, buf);
+      } catch {}
+
+      return new NextResponse(buf, {
+        status: 200,
+        headers: {
+          ...CORS,
+          "Content-Type": mime,
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
+
+    return json({ error: "not found" }, 404);
+  }
+
+  // POST or PUT object (Upload)
   if (req.method === "POST" || req.method === "PUT") {
     const buf = Buffer.from(await req.arrayBuffer());
-    const destDir = path.join(process.cwd(), "public", "cms-media", bucket);
-    const dest = path.join(destDir, objectPath || `upload-${Date.now()}`);
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.writeFileSync(dest, buf);
-    const publicUrl = `/cms-media/${bucket}/${objectPath}`;
+    const finalObjectPath =
+      objectPath || `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
+    const mimeType = req.headers.get("content-type") || getMimeType(finalObjectPath);
+    const assetId = crypto.randomUUID();
+    const publicUrl = `/api/cms/storage/v1/object/public/${bucket}/${finalObjectPath}`;
+    const base64Data = buf.toString("base64");
+
+    // Attempt to write to disk if writable, safely ignore if read-only
+    const diskCandidates = [
+      path.join(dataDir(), "media", bucket, finalObjectPath),
+      path.join("/tmp", "pyrite-cms", "media", bucket, finalObjectPath),
+      path.join(process.cwd(), "public", "cms-media", bucket, finalObjectPath),
+    ];
+    for (const dest of diskCandidates) {
+      try {
+        fs.mkdirSync(path.dirname(dest), { recursive: true });
+        fs.writeFileSync(dest, buf);
+        break;
+      } catch {}
+    }
+
+    // Persist in CMS database with base64 data so it survives serverless restarts
     mutateCms((db) => {
+      db.media_assets = (db.media_assets || []).filter(
+        (m) => m.path !== `${bucket}/${finalObjectPath}` && m.path !== finalObjectPath
+      );
       db.media_assets.push({
-        id: crypto.randomUUID(),
-        path: `${bucket}/${objectPath}`,
+        id: assetId,
+        path: `${bucket}/${finalObjectPath}`,
         url: publicUrl,
-        alt: null,
-        mime_type: req.headers.get("content-type"),
+        alt: finalObjectPath.replace(/[^\w.-]+/g, " "),
+        mime_type: mimeType,
         size_bytes: buf.length,
+        data_base64: base64Data,
         created_at: new Date().toISOString(),
       });
     });
-    return json({ Key: `${bucket}/${objectPath}`, url: publicUrl }, 200);
+
+    return json({ Key: `${bucket}/${finalObjectPath}`, Id: assetId, url: publicUrl }, 200);
   }
+
   return json({ error: "not found" }, 404);
 }
 

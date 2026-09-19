@@ -31,23 +31,41 @@ const LOCAL_OWNER = "00000000-0000-4000-8000-000000000001";
 
 let cache: CmsDb | null = null;
 
-function dataDir(): string {
+function isDirectoryWritable(dir: string): boolean {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const probe = path.join(dir, `.probe-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`);
+    fs.writeFileSync(probe, "1");
+    fs.unlinkSync(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+let resolvedDataDir: string | null = null;
+
+export function dataDir(): string {
+  if (resolvedDataDir) return resolvedDataDir;
+
   const candidates = [
     path.join(process.cwd(), "data"),
     path.join(process.cwd(), "apps", "storefront", "data"),
-    path.join("/tmp", "pyrite-cms"),
   ];
-  const existing = candidates.find((d) => fs.existsSync(d));
-  if (existing) return existing;
+
   for (const dir of candidates) {
-    try {
-      fs.mkdirSync(dir, { recursive: true });
+    if (fs.existsSync(dir) && isDirectoryWritable(dir)) {
+      resolvedDataDir = dir;
       return dir;
-    } catch {
-      // read-only on Vercel except /tmp
     }
   }
-  return candidates[candidates.length - 1];
+
+  const tmpDir = path.join("/tmp", "pyrite-cms");
+  try {
+    fs.mkdirSync(tmpDir, { recursive: true });
+  } catch {}
+  resolvedDataDir = tmpDir;
+  return tmpDir;
 }
 
 function dbPath(): string {
@@ -311,15 +329,32 @@ export function isCmsTable(name: string): name is keyof CmsDb {
 }
 
 export function readCms(): CmsDb {
+  if (cache) return cache;
   const file = dbPath();
   if (fs.existsSync(file)) {
     try {
       cache = JSON.parse(fs.readFileSync(file, "utf8")) as CmsDb;
-      return cache;
+      return cache!;
     } catch {
       // fall through to seed
     }
   }
+
+  // If writable dbPath does not exist yet, look for pre-bundled cms-local.json
+  const seedCandidates = [
+    path.join(process.cwd(), "apps", "storefront", "data", "cms-local.json"),
+    path.join(process.cwd(), "data", "cms-local.json"),
+  ];
+  for (const s of seedCandidates) {
+    if (fs.existsSync(s)) {
+      try {
+        cache = JSON.parse(fs.readFileSync(s, "utf8")) as CmsDb;
+        writeCms(cache);
+        return cache!;
+      } catch {}
+    }
+  }
+
   cache = buildSeed();
   writeCms(cache);
   return cache;
@@ -328,9 +363,11 @@ export function readCms(): CmsDb {
 export function writeCms(db: CmsDb) {
   cache = db;
   try {
-    fs.writeFileSync(dbPath(), JSON.stringify(db, null, 2), "utf8");
+    const file = dbPath();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(db, null, 2), "utf8");
   } catch {
-    // Vercel serverless FS is read-only besides /tmp; in-memory cache still serves the request.
+    // In-memory cache still serves the request if disk write fails
   }
 }
 

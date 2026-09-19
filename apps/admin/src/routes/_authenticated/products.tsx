@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/admin-shell";
-import { saveProduct, deleteProduct, saveDiary, deleteDiary } from "@/lib/admin.functions";
+import { saveProduct, deleteProduct, saveDiary, deleteDiary, registerMedia } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1698,6 +1698,7 @@ function SecondaryImagesField({
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
+  const runRegister = useServerFn(registerMedia);
 
   async function handleFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -1705,8 +1706,19 @@ function SecondaryImagesField({
     try {
       const urls: string[] = [];
       for (const file of Array.from(files)) {
-        const { url } = await uploadFileToBucket(file);
+        const { path, url } = await uploadFileToBucket(file);
         urls.push(url);
+        try {
+          await runRegister({
+            data: {
+              path,
+              url,
+              alt: file.name.replace(/\.[^.]+$/, ""),
+              mime_type: file.type,
+              size_bytes: file.size,
+            },
+          });
+        } catch {}
       }
       onChange([...value, ...urls]);
       toast.success(urls.length === 1 ? "Image added" : `${urls.length} images added`);

@@ -1,8 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Minus, Plus, ShoppingCart, Heart } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Heart, Check } from 'lucide-react';
 import { useCart } from '@/context/ProductContext';
 import { pickVisibleFeatures } from "@/lib/cms/mappers";
 
@@ -48,8 +47,8 @@ function specsFromFeatures(
 export default function ProductInfo({ product, chrome }: ProductInfoProps) {
   const moq = Math.max(1, Number(product.moq) || 100);
   const [quantity, setQuantity] = useState<number>(moq);
+  const [isAdded, setIsAdded] = useState(false);
   const { addToCart, toggleFavourite, isFavourite } = useCart();
-  const router = useRouter();
   const isFav = isFavourite(product.id);
 
   const tags = useMemo(() => {
@@ -298,12 +297,26 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
                   },
                   quantity,
                 );
-                router.push('/cart');
+                setIsAdded(true);
+                setTimeout(() => setIsAdded(false), 2000);
               }}
-              className="flex-1 flex items-center justify-center gap-2.5 bg-[#0F172A] hover:bg-[#1E293B] text-white font-semibold py-4 px-8 rounded-lg transition-colors duration-200 text-base shadow-sm hover:shadow-md cursor-pointer"
+              className={`flex-1 flex items-center justify-center gap-2.5 font-semibold py-4 px-8 rounded-lg transition-all duration-200 text-base shadow-sm hover:shadow-md cursor-pointer ${
+                isAdded
+                  ? 'bg-emerald-700 text-white'
+                  : 'bg-[#0F172A] hover:bg-[#1E293B] text-white'
+              }`}
             >
-              <ShoppingCart className="w-5 h-5" />
-              <span>Add to Cart</span>
+              {isAdded ? (
+                <>
+                  <Check className="w-5 h-5 text-white" />
+                  <span>Added to Cart!</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="w-5 h-5" />
+                  <span>Add to Cart</span>
+                </>
+              )}
             </button>
             <button
               type="button"

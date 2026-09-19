@@ -8,6 +8,7 @@ import {
   readCms,
   dataDir,
   LOCAL_OWNER_ID,
+  extractFileFromMultipart,
   type CmsRow,
 } from "@/lib/cms/local-store";
 
@@ -184,10 +185,21 @@ async function handleRest(req: NextRequest, table: string) {
     mutateCms((db) => {
       for (const item of items) {
         if (!item) continue;
-        if (table === "media_assets" && item.path) {
-          const existing = (db.media_assets || []).find((m) => m.path === item.path);
+        if (table === "media_assets") {
+          const itemClean = (item.path || "").replace(/^site-media\//, "");
+          const existing = (db.media_assets || []).find(
+            (m) =>
+              m.path === item.path ||
+              (m.path || "").replace(/^site-media\//, "") === itemClean ||
+              (item.url && m.url && (m.url === item.url || m.url.endsWith(`/${itemClean}`)))
+          );
           if (existing) {
-            Object.assign(existing, item, { updated_at: new Date().toISOString() });
+            const preservedB64 = existing.data_base64 || item.data_base64;
+            Object.assign(existing, item, {
+              path: existing.path || item.path,
+              data_base64: preservedB64,
+              updated_at: new Date().toISOString(),
+            });
             inserted.push(existing);
             continue;
           }
@@ -336,8 +348,10 @@ async function handleStorage(req: NextRequest, parts: string[]) {
     for (const p of diskCandidates) {
       if (fs.existsSync(p)) {
         try {
-          const buf = fs.readFileSync(p);
-          const mime = getMimeType(objectPath);
+          let buf = fs.readFileSync(p);
+          const unwrapped = extractFileFromMultipart(buf);
+          buf = unwrapped.buf;
+          const mime = unwrapped.mime || getMimeType(objectPath);
           return new NextResponse(buf, {
             status: 200,
             headers: {
@@ -352,17 +366,21 @@ async function handleStorage(req: NextRequest, parts: string[]) {
 
     // 2. Try looking up in database media_assets
     const db = readCms();
+    const cleanObject = objectPath.replace(/^site-media\//, "");
     const asset = (db.media_assets || []).find(
       (m) =>
         m.path === `${bucket}/${objectPath}` ||
         m.path === objectPath ||
-        m.path?.endsWith(`/${objectPath}`) ||
-        m.url?.endsWith(`/${objectPath}`)
+        (m.path || "").replace(/^site-media\//, "") === cleanObject ||
+        m.path?.endsWith(`/${cleanObject}`) ||
+        m.url?.endsWith(`/${cleanObject}`)
     );
 
     if (asset && asset.data_base64) {
-      const buf = Buffer.from(asset.data_base64, "base64");
-      const mime = asset.mime_type || getMimeType(objectPath);
+      let buf = Buffer.from(asset.data_base64, "base64");
+      const unwrapped = extractFileFromMultipart(buf);
+      buf = unwrapped.buf;
+      const mime = unwrapped.mime || asset.mime_type || getMimeType(objectPath);
       // Cache to /tmp for fast future hits
       try {
         const tmpPath = path.join("/tmp", "pyrite-cms", "media", bucket, objectPath);
@@ -385,10 +403,43 @@ async function handleStorage(req: NextRequest, parts: string[]) {
 
   // POST or PUT object (Upload)
   if (req.method === "POST" || req.method === "PUT") {
-    const buf = Buffer.from(await req.arrayBuffer());
+    let buf: Buffer;
     const finalObjectPath =
       objectPath || `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.png`;
-    const mimeType = req.headers.get("content-type") || getMimeType(finalObjectPath);
+    let mimeType = getMimeType(finalObjectPath);
+    const contentType = req.headers.get("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      try {
+        const formData = await req.formData();
+        let foundFile: File | null = null;
+        for (const [, val] of formData.entries()) {
+          if (val && typeof val === "object" && typeof (val as File).arrayBuffer === "function") {
+            foundFile = val as File;
+            break;
+          }
+        }
+        if (foundFile) {
+          buf = Buffer.from(await foundFile.arrayBuffer());
+          mimeType = foundFile.type || getMimeType(foundFile.name || finalObjectPath);
+        } else {
+          buf = Buffer.from(await req.arrayBuffer());
+        }
+      } catch {
+        buf = Buffer.from(await req.arrayBuffer());
+      }
+    } else {
+      buf = Buffer.from(await req.arrayBuffer());
+      if (contentType && !contentType.includes("application/octet-stream")) {
+        mimeType = contentType;
+      }
+    }
+
+    // Safety unwrap if raw multipart headers were read
+    const unwrapped = extractFileFromMultipart(buf);
+    buf = unwrapped.buf;
+    if (unwrapped.mime) mimeType = unwrapped.mime;
+
     const assetId = crypto.randomUUID();
     const publicUrl = `/api/cms/storage/v1/object/public/${bucket}/${finalObjectPath}`;
     const base64Data = buf.toString("base64");
@@ -409,8 +460,13 @@ async function handleStorage(req: NextRequest, parts: string[]) {
 
     // Persist in CMS database with base64 data so it survives serverless restarts
     mutateCms((db) => {
+      const cleanPath = finalObjectPath.replace(/^site-media\//, "");
       db.media_assets = (db.media_assets || []).filter(
-        (m) => m.path !== `${bucket}/${finalObjectPath}` && m.path !== finalObjectPath
+        (m) =>
+          m.path !== `${bucket}/${finalObjectPath}` &&
+          m.path !== finalObjectPath &&
+          (m.path || "").replace(/^site-media\//, "") !== cleanPath &&
+          !m.url?.endsWith(`/${cleanPath}`)
       );
       db.media_assets.push({
         id: assetId,

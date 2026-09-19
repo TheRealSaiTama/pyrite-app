@@ -328,12 +328,111 @@ export function isCmsTable(name: string): name is keyof CmsDb {
   return (TABLES as string[]).includes(name);
 }
 
+export function extractFileFromMultipart(buf: Buffer): { buf: Buffer; mime?: string; filename?: string } {
+  if (!buf || buf.length < 2 || buf.slice(0, 2).toString() !== "--") {
+    return { buf };
+  }
+
+  const marker1 = Buffer.from("\r\n\r\n");
+  const marker2 = Buffer.from("\n\n");
+
+  let pos = 0;
+  let fileStart = -1;
+  let detectedMime: string | undefined;
+  let detectedName: string | undefined;
+
+  while (pos < buf.length) {
+    const idx1 = buf.indexOf(marker1, pos);
+    const idx2 = buf.indexOf(marker2, pos);
+    let sepIdx = -1;
+    let sepLen = 0;
+    if (idx1 !== -1 && (idx2 === -1 || idx1 <= idx2)) {
+      sepIdx = idx1;
+      sepLen = 4;
+    } else if (idx2 !== -1) {
+      sepIdx = idx2;
+      sepLen = 2;
+    }
+    if (sepIdx === -1) break;
+
+    const headerStr = buf.slice(pos, sepIdx).toString("utf8");
+    if (/filename=/i.test(headerStr)) {
+      const mimeMatch = headerStr.match(/content-type:\s*([^\r\n]+)/i);
+      if (mimeMatch) detectedMime = mimeMatch[1].trim();
+      const fnMatch = headerStr.match(/filename="?([^"\r\n]+)"?/i);
+      if (fnMatch) detectedName = fnMatch[1].trim();
+      fileStart = sepIdx + sepLen;
+      break;
+    }
+    pos = sepIdx + sepLen;
+  }
+
+  if (fileStart === -1) return { buf };
+
+  const firstNewline = buf.indexOf("\n");
+  const boundaryLine = (firstNewline !== -1 ? buf.slice(0, firstNewline) : buf).toString("utf8").trim();
+  const boundaryBuf = Buffer.from("\r\n" + boundaryLine);
+  let fileEnd = buf.indexOf(boundaryBuf, fileStart);
+  if (fileEnd === -1) {
+    const boundaryBuf2 = Buffer.from("\n" + boundaryLine);
+    fileEnd = buf.indexOf(boundaryBuf2, fileStart);
+  }
+  if (fileEnd === -1) fileEnd = buf.length;
+
+  return { buf: buf.slice(fileStart, fileEnd), mime: detectedMime, filename: detectedName };
+}
+
+export function sanitizeMediaAssets(db: CmsDb) {
+  if (!Array.isArray(db.media_assets)) return;
+
+  const seen = new Map<string, CmsRow>();
+  const cleaned: CmsRow[] = [];
+
+  for (const asset of db.media_assets) {
+    // 1. Unwrap multipart base64 if needed
+    if (asset.data_base64) {
+      try {
+        const raw = Buffer.from(asset.data_base64, "base64");
+        if (raw.slice(0, 2).toString() === "--") {
+          const extracted = extractFileFromMultipart(raw);
+          asset.data_base64 = extracted.buf.toString("base64");
+          asset.size_bytes = extracted.buf.length;
+          if (extracted.mime) asset.mime_type = extracted.mime;
+        }
+      } catch {}
+    }
+
+    // 2. Normalize key for deduplication
+    const rawPath = String(asset.path || "");
+    const cleanPath = rawPath.replace(/^site-media\//, "");
+    const rawUrl = String(asset.url || "");
+    const filename = cleanPath || path.basename(rawUrl);
+    const key = filename.toLowerCase();
+
+    if (!seen.has(key)) {
+      seen.set(key, asset);
+      cleaned.push(asset);
+    } else {
+      const existing = seen.get(key)!;
+      if (!existing.data_base64 && asset.data_base64) {
+        existing.data_base64 = asset.data_base64;
+        existing.size_bytes = asset.size_bytes;
+        existing.mime_type = existing.mime_type || asset.mime_type;
+      }
+      if (asset.url && !existing.url) existing.url = asset.url;
+    }
+  }
+
+  db.media_assets = cleaned;
+}
+
 export function readCms(): CmsDb {
   if (cache) return cache;
   const file = dbPath();
   if (fs.existsSync(file)) {
     try {
       cache = JSON.parse(fs.readFileSync(file, "utf8")) as CmsDb;
+      sanitizeMediaAssets(cache);
       return cache!;
     } catch {
       // fall through to seed
@@ -349,6 +448,7 @@ export function readCms(): CmsDb {
     if (fs.existsSync(s)) {
       try {
         cache = JSON.parse(fs.readFileSync(s, "utf8")) as CmsDb;
+        sanitizeMediaAssets(cache);
         writeCms(cache);
         return cache!;
       } catch {}
@@ -356,6 +456,7 @@ export function readCms(): CmsDb {
   }
 
   cache = buildSeed();
+  sanitizeMediaAssets(cache);
   writeCms(cache);
   return cache;
 }

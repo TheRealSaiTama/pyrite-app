@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
-import { readCms, dataDir } from "@/lib/cms/local-store";
+import { readCms, dataDir, extractFileFromMultipart } from "@/lib/cms/local-store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,8 +60,10 @@ export async function GET(
   for (const p of diskCandidates) {
     if (fs.existsSync(p)) {
       try {
-        const buf = fs.readFileSync(p);
-        const mime = getMimeType(objectPath);
+        let buf = fs.readFileSync(p);
+        const unwrapped = extractFileFromMultipart(buf);
+        buf = unwrapped.buf;
+        const mime = unwrapped.mime || getMimeType(objectPath);
         return new NextResponse(buf, {
           status: 200,
           headers: {
@@ -76,17 +78,21 @@ export async function GET(
 
   // 2. Try database media_assets
   const db = readCms();
+  const cleanObject = objectPath.replace(/^site-media\//, "");
   const asset = (db.media_assets || []).find(
     (m) =>
       m.path === `${bucket}/${objectPath}` ||
       m.path === objectPath ||
-      m.path?.endsWith(`/${objectPath}`) ||
-      m.url?.endsWith(`/${objectPath}`)
+      (m.path || "").replace(/^site-media\//, "") === cleanObject ||
+      m.path?.endsWith(`/${cleanObject}`) ||
+      m.url?.endsWith(`/${cleanObject}`)
   );
 
   if (asset && asset.data_base64) {
-    const buf = Buffer.from(asset.data_base64, "base64");
-    const mime = asset.mime_type || getMimeType(objectPath);
+    let buf = Buffer.from(asset.data_base64, "base64");
+    const unwrapped = extractFileFromMultipart(buf);
+    buf = unwrapped.buf;
+    const mime = unwrapped.mime || asset.mime_type || getMimeType(objectPath);
     try {
       const tmpPath = path.join("/tmp", "pyrite-cms", "media", bucket, objectPath);
       fs.mkdirSync(path.dirname(tmpPath), { recursive: true });

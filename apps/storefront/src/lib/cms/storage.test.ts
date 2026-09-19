@@ -44,4 +44,23 @@ describe("storage & media upload persistence", () => {
     const dataUrl = "data:image/png;base64,iVBORw0KGgo=";
     assert.equal(resolveProductImage(dataUrl), dataUrl);
   });
+
+  it("extractFileFromMultipart unwraps multipart payload cleanly", async () => {
+    const { extractFileFromMultipart } = await import("./local-store.ts");
+    const fakeMultipart = Buffer.from(
+      '------WebKitFormBoundaryXYZ\r\n' +
+      'Content-Disposition: form-data; name="cacheControl"\r\n\r\n' +
+      '3600\r\n' +
+      '------WebKitFormBoundaryXYZ\r\n' +
+      'Content-Disposition: form-data; name=""; filename="test.jpg"\r\n' +
+      'Content-Type: image/jpeg\r\n\r\n' +
+      'REAL_JPEG_BINARY_DATA\r\n' +
+      '------WebKitFormBoundaryXYZ--'
+    );
+
+    const extracted = extractFileFromMultipart(fakeMultipart);
+    assert.equal(extracted.buf.toString(), "REAL_JPEG_BINARY_DATA");
+    assert.equal(extracted.mime, "image/jpeg");
+    assert.equal(extracted.filename, "test.jpg");
+  });
 });

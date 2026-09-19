@@ -16,7 +16,7 @@ import { MediaPicker, MediaGrid, uploadFileToBucket } from "@/components/admin/m
 import { AdminProductImage } from "@/lib/image";
 import {
   Plus, Pencil, Trash2, Search, Star, ChevronRight, Home,
-  Folder, FolderOpen, ArrowLeft, BookOpen, Package, Copy
+  Folder, FolderOpen, ArrowLeft, BookOpen, Package, Copy, X
 } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose

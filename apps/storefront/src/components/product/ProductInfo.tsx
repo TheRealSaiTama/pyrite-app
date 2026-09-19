@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Minus, Plus, ShoppingCart, Heart, Check } from 'lucide-react';
 import { useCart } from '@/context/ProductContext';
 import { pickVisibleFeatures } from "@/lib/cms/mappers";
@@ -46,10 +46,19 @@ function specsFromFeatures(
 
 export default function ProductInfo({ product, chrome }: ProductInfoProps) {
   const moq = Math.max(1, Number(product.moq) || 100);
-  const [quantity, setQuantity] = useState<number>(moq);
-  const [isAdded, setIsAdded] = useState(false);
-  const { addToCart, toggleFavourite, isFavourite } = useCart();
+  const { cart, addToCart, toggleFavourite, isFavourite } = useCart();
   const isFav = isFavourite(product.id);
+
+  const cartItem = cart.find((item) => String(item.id) === String(product.id));
+  const isInCart = Boolean(cartItem);
+
+  const [quantity, setQuantity] = useState<number>(moq);
+
+  useEffect(() => {
+    if (cartItem && cartItem.quantity) {
+      setQuantity(cartItem.quantity);
+    }
+  }, [cartItem]);
 
   const tags = useMemo(() => {
     if (!product.tags) return [] as string[];
@@ -252,7 +261,7 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
               <button
                 type="button"
                 onClick={() => setQuantity((prev) => Math.max(moq, prev - 1))}
-                disabled={quantity <= moq}
+                disabled={isInCart || quantity <= moq}
                 className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-gray-50 text-gray-700 font-bold transition-colors cursor-pointer disabled:cursor-not-allowed"
                 aria-label="Decrease quantity"
               >
@@ -261,17 +270,19 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
               <input
                 type="number"
                 min={moq}
+                disabled={isInCart}
                 value={quantity}
                 onChange={(e) => {
                   const val = parseInt(e.target.value, 10);
                   setQuantity(isNaN(val) ? moq : Math.max(moq, val));
                 }}
-                className="w-24 text-center font-bold text-gray-900 focus:outline-hidden py-2 text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-24 text-center font-bold text-gray-900 focus:outline-hidden py-2 text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-gray-50 disabled:text-gray-500"
               />
               <button
                 type="button"
                 onClick={() => setQuantity((prev) => prev + 1)}
-                className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold transition-colors cursor-pointer"
+                disabled={isInCart}
+                className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-gray-50 text-gray-700 font-bold transition-colors cursor-pointer disabled:cursor-not-allowed"
                 aria-label="Increase quantity"
               >
                 <Plus className="w-4 h-4" />
@@ -285,28 +296,29 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
             <button
               type="button"
+              disabled={isInCart}
               onClick={() => {
-                addToCart(
-                  {
-                    id: product.id,
-                    name: product.name,
-                    image: product.imageUrl || '',
-                    price: product.minPrice || 0,
-                    moq,
-                    category: product.category,
-                  },
-                  quantity,
-                );
-                setIsAdded(true);
-                setTimeout(() => setIsAdded(false), 2000);
+                if (!isInCart) {
+                  addToCart(
+                    {
+                      id: product.id,
+                      name: product.name,
+                      image: product.imageUrl || '',
+                      price: product.minPrice || 0,
+                      moq,
+                      category: product.category,
+                    },
+                    quantity,
+                  );
+                }
               }}
-              className={`flex-1 flex items-center justify-center gap-2.5 font-semibold py-4 px-8 rounded-lg transition-all duration-200 text-base shadow-sm hover:shadow-md cursor-pointer ${
-                isAdded
-                  ? 'bg-emerald-700 text-white'
-                  : 'bg-[#0F172A] hover:bg-[#1E293B] text-white'
+              className={`flex-1 flex items-center justify-center gap-2.5 font-semibold py-4 px-8 rounded-lg transition-all duration-200 text-base shadow-sm ${
+                isInCart
+                  ? 'bg-emerald-700 text-white cursor-default select-none'
+                  : 'bg-[#0F172A] hover:bg-[#1E293B] text-white hover:shadow-md cursor-pointer'
               }`}
             >
-              {isAdded ? (
+              {isInCart ? (
                 <>
                   <Check className="w-5 h-5 text-white" />
                   <span>Added to Cart!</span>
@@ -332,6 +344,13 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
               <span className="text-sm font-medium">{isFav ? 'Favourited' : 'Add to Favourites'}</span>
             </button>
           </div>
+
+          {isInCart && (
+            <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>This product is already in your cart. You can review items or adjust quantity from the cart icon in the top header.</span>
+            </p>
+          )}
         </div>
       </div>
     </div>

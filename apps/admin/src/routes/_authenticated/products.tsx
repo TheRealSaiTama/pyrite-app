@@ -76,6 +76,7 @@ type CatalogItem = {
   description: string | null;
   min_price: number | null;
   max_price: number | null;
+  moq?: number | null;
   category: string | null;
   tags: string[];
   image_url: string | null;
@@ -99,6 +100,7 @@ const empty: CatalogItem = {
   description: "",
   min_price: null,
   max_price: null,
+  moq: 100,
   category: "",
   tags: [],
   image_url: "",
@@ -828,11 +830,7 @@ function ProductsPage() {
                       {item.category ?? "—"}
                     </td>
                     <td className="px-2 py-2.5 font-mono text-xs">
-                      {item.min_price != null && item.max_price != null
-                        ? `₹${item.min_price} – ₹${item.max_price}`
-                        : item.min_price != null
-                          ? `from ₹${item.min_price}`
-                          : "—"}
+                      {item.min_price != null ? `₹${item.min_price}` : "—"}
                     </td>
                     <td className="px-2 py-2.5">
                       {item.type === "diary" ? (
@@ -1080,10 +1078,12 @@ function ProductForm({
         .map((g) => (typeof g === "string" ? g : g?.url))
         .filter((u): u is string => typeof u === "string" && u.length > 0);
     }
+    const moqVal = Number((product.features as any)?.moq?.value ?? (product as any).moq ?? 100);
     return {
       ...empty,
       ...product,
       gallery,
+      moq: Number.isFinite(moqVal) && moqVal > 0 ? moqVal : 100,
       category: product.category || defaultCategory || "",
       tags:
         product.tags && product.tags.length > 0
@@ -1115,6 +1115,13 @@ function ProductForm({
   async function handleSave() {
     setSaving(true);
     try {
+      const price = values.min_price;
+      const moqFeature = { show: true, value: String(values.moq || 100) };
+      const updatedFeatures = {
+        ...(values.features || {}),
+        moq: moqFeature,
+      };
+
       if (values.type === "diary") {
         await runSaveDiary({
           data: {
@@ -1123,8 +1130,8 @@ function ProductForm({
               slug: values.slug || slugify(values.name),
               name: values.name,
               description: values.description || null,
-              min_price: values.min_price,
-              max_price: values.max_price,
+              min_price: price,
+              max_price: price,
               category: values.category || null,
               tags: values.tags,
               color: values.color || null,
@@ -1135,7 +1142,7 @@ function ProductForm({
               featured: values.featured,
               enabled: values.enabled,
               gallery: values.gallery || [],
-              features: values.features || {},
+              features: updatedFeatures,
               seo_title: values.seo_title || null,
               seo_description: values.seo_description || null,
             },
@@ -1149,15 +1156,15 @@ function ProductForm({
               slug: values.slug || slugify(values.name),
               name: values.name,
               description: values.description || null,
-              min_price: values.min_price,
-              max_price: values.max_price,
+              min_price: price,
+              max_price: price,
               category: values.category || null,
               tags: values.tags,
               image_url: values.image_url || null,
               featured: values.featured,
               enabled: values.enabled,
               gallery: values.gallery || [],
-              features: values.features || {},
+              features: updatedFeatures,
               seo_title: values.seo_title || null,
               seo_description: values.seo_description || null,
             },
@@ -1353,12 +1360,32 @@ function ProductForm({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label>Min price (₹)</Label>
-          <Input type="number" value={values.min_price ?? ""} onChange={(e) => set("min_price", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5" />
+          <Label>Price (₹)</Label>
+          <Input
+            type="number"
+            value={values.min_price ?? ""}
+            onChange={(e) => {
+              const val = e.target.value === "" ? null : Number(e.target.value);
+              set("min_price", val);
+              set("max_price", val);
+            }}
+            placeholder="e.g. 299"
+            className="mt-1.5"
+          />
         </div>
         <div>
-          <Label>Max price (₹)</Label>
-          <Input type="number" value={values.max_price ?? ""} onChange={(e) => set("max_price", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5" />
+          <Label>MOQ (Minimum Order Quantity)</Label>
+          <Input
+            type="number"
+            min={1}
+            value={values.moq ?? 100}
+            onChange={(e) => {
+              const val = Math.max(1, Number(e.target.value) || 100);
+              set("moq", val);
+            }}
+            placeholder="e.g. 100"
+            className="mt-1.5"
+          />
         </div>
       </div>
 

@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { EnquiryFormContent } from '@/components/sections/enquiry-modal';
-import { useSelectedProducts } from '@/context/ProductContext';
+import { useRouter } from 'next/navigation';
+import { Minus, Plus, ShoppingCart, Heart } from 'lucide-react';
+import { useCart } from '@/context/ProductContext';
 import { pickVisibleFeatures } from "@/lib/cms/mappers";
 
 const TAG_VARIANTS = [
@@ -23,6 +23,7 @@ interface Product {
   description: string;
   tags?: string[] | string | null;
   features?: Record<string, { show?: boolean; value?: string }> | null;
+  moq?: number;
 }
 
 interface ProductInfoProps {
@@ -45,10 +46,11 @@ function specsFromFeatures(
 }
 
 export default function ProductInfo({ product, chrome }: ProductInfoProps) {
-  const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
-  const { selectProduct, clearSelected } = useSelectedProducts();
-  const enquiryCta = chrome?.enquiry_cta?.trim() || "Enquire Now";
-  const quoteCta = chrome?.quote_cta?.trim() || "Request Quote";
+  const moq = Math.max(1, Number(product.moq) || 100);
+  const [quantity, setQuantity] = useState<number>(moq);
+  const { addToCart, toggleFavourite, isFavourite } = useCart();
+  const router = useRouter();
+  const isFav = isFavourite(product.id);
 
   const tags = useMemo(() => {
     if (!product.tags) return [] as string[];
@@ -61,19 +63,6 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
       .map((tag) => tag.replace(/\s+/g, ' ').trim())
       .filter(Boolean);
   }, [product.tags]);
-
-  const handleEnquire = () => {
-    selectProduct({
-      id: product.id,
-      name: product.name,
-      image: product.imageUrl || '',
-      price: product.minPrice || 0,
-      currency: 'INR',
-      description: '',
-      category: product.category,
-    });
-    setIsEnquiryModalOpen(true);
-  };
 
   const generateSKU = (id: string | number) => {
     return `71 ${id.toString().slice(-6).toUpperCase()} OP | LEATHER`;
@@ -179,32 +168,20 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
 
         <div className="mb-8 pb-6 border-b border-gray-200">
           <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Our Price</p>
-          {(() => {
-            const hasRange =
-              typeof product.minPrice === 'number' &&
-              typeof product.maxPrice === 'number' &&
-              product.minPrice !== product.maxPrice;
-            const hasSingle =
-              typeof product.minPrice === 'number' && product.minPrice !== null;
-
-            if (hasRange) {
-              return (
-                <p className="text-4xl lg:text-5xl font-bold text-red-600">
-                  ₹{product.minPrice!.toLocaleString()} - ₹{product.maxPrice!.toLocaleString()}
-                </p>
-              );
-            } else if (hasSingle) {
-              return (
-                <p className="text-4xl lg:text-5xl font-bold text-red-600">
-                  ₹{product.minPrice!.toLocaleString()}
-                </p>
-              );
-            } else {
-              return (
-                <p className="text-3xl font-bold text-gray-700">Price on Request</p>
-              );
-            }
-          })()}
+          {typeof product.minPrice === 'number' && product.minPrice !== null ? (
+            <div className="flex items-baseline gap-2">
+              <p className="text-4xl lg:text-5xl font-bold text-red-600">
+                ₹{product.minPrice.toLocaleString()}
+              </p>
+              <span className="text-sm text-gray-500 font-medium">/ piece</span>
+            </div>
+          ) : (
+            <p className="text-3xl font-bold text-gray-700">Price on Request</p>
+          )}
+          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-md text-xs font-semibold text-amber-800">
+            <span>Minimum Order Quantity (MOQ):</span>
+            <span className="font-bold">{moq} units</span>
+          </div>
         </div>
 
         {tags.length > 0 && (
@@ -267,38 +244,82 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
           </div>
         )}
 
-        <Dialog open={isEnquiryModalOpen} onOpenChange={setIsEnquiryModalOpen}>
-          <DialogTrigger asChild>
-            <button
-              onClick={handleEnquire}
-              className="w-full bg-[#0F172A] hover:bg-[#1E293B] text-white font-semibold py-4 px-8 rounded-lg transition-colors duration-200 text-base shadow-sm hover:shadow-md"
-            >
-              {enquiryCta}
-            </button>
-          </DialogTrigger>
-          <DialogContent>
-            <EnquiryFormContent
-              open={isEnquiryModalOpen}
-              onOpenChange={setIsEnquiryModalOpen}
-              selectedProducts={[
-                {
-                  id: product.id,
-                  name: product.name,
-                  image: product.imageUrl || '',
-                  price: product.minPrice || 0,
-                  currency: 'INR',
-                  description: '',
-                  category: product.category,
-                },
-              ]}
-              onSubmitAfter={clearSelected}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="space-y-4 pt-4 border-t border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <span className="text-sm font-semibold text-gray-700 min-w-[80px]">
+              Quantity:
+            </span>
+            <div className="inline-flex items-center border-2 border-gray-200 rounded-lg overflow-hidden bg-white shadow-xs">
+              <button
+                type="button"
+                onClick={() => setQuantity((prev) => Math.max(moq, prev - 1))}
+                disabled={quantity <= moq}
+                className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-gray-50 text-gray-700 font-bold transition-colors cursor-pointer disabled:cursor-not-allowed"
+                aria-label="Decrease quantity"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+              <input
+                type="number"
+                min={moq}
+                value={quantity}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  setQuantity(isNaN(val) ? moq : Math.max(moq, val));
+                }}
+                className="w-24 text-center font-bold text-gray-900 focus:outline-hidden py-2 text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <button
+                type="button"
+                onClick={() => setQuantity((prev) => prev + 1)}
+                className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold transition-colors cursor-pointer"
+                aria-label="Increase quantity"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+            <span className="text-xs text-gray-500 font-medium">
+              (Minimum order: {moq} units)
+            </span>
+          </div>
 
-        <button className="w-full mt-3 bg-white border-2 border-[#0F172A] text-[#0F172A] hover:bg-[#0F172A] hover:text-white font-semibold py-4 px-8 rounded-lg transition-colors duration-200 text-base">
-          {quoteCta}
-        </button>
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                addToCart(
+                  {
+                    id: product.id,
+                    name: product.name,
+                    image: product.imageUrl || '',
+                    price: product.minPrice || 0,
+                    moq,
+                    category: product.category,
+                  },
+                  quantity,
+                );
+                router.push('/cart');
+              }}
+              className="flex-1 flex items-center justify-center gap-2.5 bg-[#0F172A] hover:bg-[#1E293B] text-white font-semibold py-4 px-8 rounded-lg transition-colors duration-200 text-base shadow-sm hover:shadow-md cursor-pointer"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              <span>Add to Cart</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleFavourite(product.id)}
+              className={`flex items-center justify-center gap-2 sm:w-auto px-6 py-4 rounded-lg font-semibold border-2 transition-all duration-200 cursor-pointer ${
+                isFav
+                  ? 'bg-rose-50 border-rose-500 text-rose-600'
+                  : 'bg-white border-[#0F172A] text-[#0F172A] hover:bg-slate-50'
+              }`}
+              aria-label={isFav ? 'Remove from favourites' : 'Add to favourites'}
+            >
+              <Heart className={`w-5 h-5 ${isFav ? 'fill-rose-500 text-rose-500' : ''}`} />
+              <span className="text-sm font-medium">{isFav ? 'Favourited' : 'Add to Favourites'}</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -5,8 +5,6 @@ import Link from 'next/link';
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Diary, Product } from '@prisma/client';
-import { EnquiryFormContent } from '@/components/sections/enquiry-modal';
-import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
 import type { Product as ProductType } from '@/types/Product';
 import { useSelectedProducts } from '@/context/ProductContext';
 import { resolveProductImage, isRemoteOrDataImage } from "@/lib/product-image";
@@ -125,42 +123,7 @@ export default function ShopClient({
     []
   );
 
-  const {
-    selectedProducts,
-    selectProduct,
-    deselectProduct,
-    isSelected,
-    clearSelected,
-  } = useSelectedProducts();
-  const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
 
-  const handleProductSelect = (product: ShopProduct) => {
-    if (isSelected(product.id)) {
-      deselectProduct(product.id);
-    } else {
-      selectProduct({
-        id: product.id,
-        name: product.name,
-        image: product.imageUrl || '',
-        price: product.minPrice || 0,
-        currency: 'INR',
-        description: product.description || '',
-        category: product.category,
-      });
-    }
-  };
-
-  const formattedSelectedProducts: ProductType[] = useMemo(() => {
-    return selectedProducts.map(p => ({
-      id: p.id,
-      name: p.name,
-      image: p.image || '',
-      price: p.price,
-      currency: 'INR',
-      description: p.description || '',
-      category: p.category,
-    }));
-  }, [selectedProducts]);
 
   const combinedProducts = useMemo(() => {
     const diariesAsProducts: ShopProduct[] = (initialDiaries || []).map((diary: any) => ({
@@ -254,8 +217,7 @@ export default function ShopClient({
 
   return (
     <main className="container mx-auto px-4 py-12">
-      <Dialog open={isEnquiryModalOpen} onOpenChange={setIsEnquiryModalOpen}>
-        <div className="flex flex-col lg:flex-row gap-8">
+      <div className="flex flex-col lg:flex-row gap-8">
           <aside className="lg:w-72 order-2 lg:order-1">
             <div className="sticky top-4 space-y-6">
               <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-md">
@@ -390,8 +352,11 @@ export default function ShopClient({
                   const imageUrl = resolveProductImage(product.imageUrl);
 
                   return (
-                    <article key={String(product.id)} className="bg-white rounded-xl shadow-md hover:shadow-xl overflow-hidden transition-all duration-300 border border-gray-100 hover:border-primary/30">
-                      <Link href={`/shop/${product.id}`} className="block group">
+                    <article
+                      key={String(product.id)}
+                      className="bg-white rounded-xl shadow-md hover:shadow-xl overflow-hidden transition-all duration-300 border border-gray-100 hover:border-primary/30 flex flex-col group"
+                    >
+                      <Link href={`/shop/${product.id}`} className="block flex-1 flex flex-col">
                         <div className="relative h-56 bg-gradient-to-br from-gray-50 to-white overflow-hidden">
                           <Image
                             src={imageUrl}
@@ -401,48 +366,26 @@ export default function ShopClient({
                             className="object-cover group-hover:scale-105 transition-transform duration-500"
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                           />
-                          <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded-full text-xs font-medium opacity-0 group-hover:opacity-100 transition-all duration-300">
+                          <div className="absolute top-2 right-2 bg-primary/80 backdrop-blur-xs text-white px-2.5 py-1 rounded-full text-xs font-medium opacity-0 group-hover:opacity-100 transition-all duration-300">
                             View Details
                           </div>
                         </div>
-                      </Link>
-                      <div className="p-5">
-                        <h3 className="text-base font-semibold text-gray-800 line-clamp-2 mb-4 hover:text-primary transition-colors">
-                          <Link href={`/shop/${product.id}`}>{product.name}</Link>
-                        </h3>
-                        <div className="flex items-center justify-between">
-                          {(() => {
-                            const hasRange =
-                              typeof product.minPrice === 'number' &&
-                              typeof product.maxPrice === 'number' &&
-                              product.minPrice !== product.maxPrice;
-                            const hasSingle = typeof product.minPrice === 'number' && product.minPrice !== null;
-                            const priceLabel = hasRange
-                              ? `₹${product.minPrice!.toLocaleString()} – ₹${product.maxPrice!.toLocaleString()}`
-                              : hasSingle
-                                ? `₹${product.minPrice!.toLocaleString()}`
-                                : 'On request';
-                            const badgeClass = hasSingle
-                              ? 'bg-primary/10 text-primary border border-primary/10'
-                              : 'bg-amber-50 text-amber-600 border border-amber-200';
-                            return (
-                              <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${badgeClass}`}>
-                                {priceLabel}
-                              </span>
-                            );
-                          })()}
-                          <button
-                            onClick={() => handleProductSelect(product)}
-                            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-1 ${
-                              isSelected(product.id)
-                                ? 'bg-green-600 text-white hover:bg-green-700'
-                                : 'bg-primary text-white hover:bg-primary/90'
-                            }`}
-                          >
-                            {isSelected(product.id) ? 'Selected' : 'Enquire Now'}
-                          </button>
+                        <div className="p-5 flex flex-col justify-between flex-1">
+                          <h3 className="text-base font-semibold text-gray-800 line-clamp-2 mb-3 group-hover:text-primary transition-colors">
+                            {product.name}
+                          </h3>
+                          <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
+                            <span className="text-lg font-bold text-primary">
+                              {typeof product.minPrice === 'number' && product.minPrice !== null
+                                ? `₹${product.minPrice.toLocaleString()}`
+                                : 'On request'}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-500 group-hover:text-primary transition-colors flex items-center gap-1">
+                              View →
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     </article>
                   );
                 })}
@@ -450,15 +393,6 @@ export default function ShopClient({
             )}
           </div>
         </div>
-        <DialogContent>
-          <EnquiryFormContent 
-            open={isEnquiryModalOpen} 
-            onOpenChange={setIsEnquiryModalOpen} 
-            selectedProducts={selectedProducts}
-            onSubmitAfter={clearSelected}
-          />
-        </DialogContent>
-      </Dialog>
     </main>
   );
 }

@@ -30,6 +30,7 @@ export type CatalogItem = {
   seoTitle: string | null;
   seoDescription: string | null;
   source: "product" | "diary";
+  moq?: number;
 };
 
 function asSettings(row: CmsRow | undefined): SiteSettingsOut {
@@ -67,6 +68,7 @@ function asCatalog(row: CmsRow, source: "product" | "diary"): CatalogItem {
     seoTitle: row.seo_title ?? row.seoTitle ?? null,
     seoDescription: row.seo_description ?? row.seoDescription ?? null,
     source,
+    moq: Number(row.moq ?? (row.features as any)?.moq?.value ?? (row.features as any)?.moq ?? 100) || 100,
   };
 }
 

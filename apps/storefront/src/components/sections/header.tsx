@@ -20,13 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-} from "@/components/ui/dialog";
-import { EnquiryFormContent } from "./enquiry-modal";
-import { useSelectedProducts } from "@/context/ProductContext";
+import { useCart } from "@/context/ProductContext";
 
 type SearchResultItem = {
   id: string | number;
@@ -75,9 +69,8 @@ const Header = ({
   const logo = rawLogo || "/logo.png";
   const brand = brandName?.trim() || "Pyrite";
 
-  const [isEnquiryModalOpen, setIsEnquiryModalOpen] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-  const { selectedProducts, clearSelected } = useSelectedProducts();
+  const { cartCount, favourites } = useCart();
   const router = useRouter();
 
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -349,45 +342,41 @@ const Header = ({
             {/* Favourites Button */}
             <Link
               href="/shop?filter=featured"
-              className="flex flex-col items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors group px-1 py-0.5 cursor-pointer"
+              className="flex flex-col items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors group relative px-1 py-0.5 cursor-pointer"
               title="View Favourites"
             >
-              <Heart className="w-5 h-5 text-slate-700 group-hover:text-[#0F172A] group-hover:scale-110 transition-all" />
+              <div className="relative">
+                <Heart className="w-5 h-5 text-slate-700 group-hover:text-[#0F172A] group-hover:scale-110 transition-all" />
+                {favourites.length > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5 bg-rose-500 text-white text-[10px] font-bold h-4 min-w-4 px-1 rounded-full flex items-center justify-center shadow-xs">
+                    {favourites.length}
+                  </span>
+                )}
+              </div>
               <span className="text-xs font-medium text-slate-600 group-hover:text-[#0F172A] mt-1 hidden sm:inline">
                 Favourites
               </span>
             </Link>
 
-            {/* Add to Cart / Enquiry Modal Trigger */}
-            <Dialog open={isEnquiryModalOpen} onOpenChange={setIsEnquiryModalOpen}>
-              <DialogTrigger asChild>
-                <button
-                  type="button"
-                  className="flex flex-col items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors group relative px-1 py-0.5 cursor-pointer"
-                  aria-label="Add to Cart"
-                >
-                  <div className="relative">
-                    <ShoppingCart className="w-5 h-5 text-slate-700 group-hover:text-[#0F172A] group-hover:scale-110 transition-all" />
-                    {selectedProducts.length > 0 && (
-                      <span className="absolute -top-1.5 -right-2.5 bg-[#0F172A] text-white text-[10px] font-bold h-4 min-w-4 px-1 rounded-full flex items-center justify-center shadow-xs">
-                        {selectedProducts.length}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-xs font-medium text-slate-600 group-hover:text-[#0F172A] mt-1 whitespace-nowrap hidden sm:inline">
-                    Add to Cart
+            {/* Cart Button */}
+            <Link
+              href="/cart"
+              className="flex flex-col items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors group relative px-1 py-0.5 cursor-pointer"
+              aria-label="View Shopping Cart"
+              title="View Cart"
+            >
+              <div className="relative">
+                <ShoppingCart className="w-5 h-5 text-slate-700 group-hover:text-[#0F172A] group-hover:scale-110 transition-all" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5 bg-[#0F172A] text-white text-[10px] font-bold h-4 min-w-4 px-1 rounded-full flex items-center justify-center shadow-xs">
+                    {cartCount}
                   </span>
-                </button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl rounded-2xl p-0 overflow-hidden">
-                <EnquiryFormContent
-                  open={isEnquiryModalOpen}
-                  onOpenChange={setIsEnquiryModalOpen}
-                  selectedProducts={selectedProducts}
-                  onSubmitAfter={clearSelected}
-                />
-              </DialogContent>
-            </Dialog>
+                )}
+              </div>
+              <span className="text-xs font-medium text-slate-600 group-hover:text-[#0F172A] mt-1 whitespace-nowrap hidden sm:inline">
+                Cart
+              </span>
+            </Link>
 
             {/* Mobile Menu Toggle Button */}
             <button

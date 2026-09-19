@@ -59,6 +59,7 @@ async function getProduct(id: string): Promise<any | null> {
       seoTitle: item.seoTitle,
       seoDescription: item.seoDescription,
       enabled: item.enabled,
+      moq: item.moq ?? 100,
     };
   }
   return null;

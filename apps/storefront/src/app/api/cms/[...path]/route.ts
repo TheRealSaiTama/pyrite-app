@@ -17,9 +17,9 @@ const JWT_SECRET = "pyrite-local-cms";
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, apikey, content-type, prefer, x-client-info, accept-profile, content-profile, range, accept",
+    "authorization, apikey, content-type, prefer, x-client-info, x-supabase-api-version, accept-profile, content-profile, range, accept, *",
   "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS, HEAD",
-  "Access-Control-Expose-Headers": "content-range, content-profile, location",
+  "Access-Control-Expose-Headers": "content-range, content-profile, location, *",
 };
 
 function json(body: unknown, status = 200, extra: Record<string, string> = {}) {
@@ -268,7 +268,19 @@ async function handleStorage(req: NextRequest, parts: string[]) {
 async function handleAuth(req: NextRequest, parts: string[]) {
   const action = parts.slice(1).join("/");
   if (req.method === "GET" && (action === "v1/user" || parts.includes("user"))) {
-    return json({ ...localUser(), aud: "authenticated" });
+    const authHeader = req.headers.get("authorization") || "";
+    let email = "admin@local";
+    if (authHeader.startsWith("Bearer ")) {
+      try {
+        const token = authHeader.replace(/^Bearer\s+/i, "");
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+          if (payload?.email) email = payload.email;
+        }
+      } catch {}
+    }
+    return json({ ...localUser(email), aud: "authenticated" });
   }
   if (req.method === "POST" && (action === "v1/signup" || action.includes("signup") || action.includes("token"))) {
     const body = (await req.json().catch(() => ({}))) as { email?: string; password?: string };
@@ -291,8 +303,13 @@ async function dispatch(req: NextRequest, parts: string[]) {
   return json({ error: "not found", path: parts.join("/") }, 404);
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS });
+export async function OPTIONS(req: NextRequest) {
+  const reqHeaders = req.headers.get("access-control-request-headers");
+  const headers = {
+    ...CORS,
+    ...(reqHeaders ? { "Access-Control-Allow-Headers": reqHeaders } : {}),
+  };
+  return new NextResponse(null, { status: 204, headers });
 }
 
 async function run(req: NextRequest, ctx: { params: Promise<{ path: string[] }> | { path: string[] } }) {

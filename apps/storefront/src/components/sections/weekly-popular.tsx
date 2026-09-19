@@ -2,8 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useSelectedProducts } from '@/context/ProductContext';
-import { Checkbox } from '@/components/ui/checkbox';
 import type { Product } from '@/types/Product';
 import {
   resolveProductImage,
@@ -89,7 +87,6 @@ interface WeeklyPopularProductsProps {
 }
 
 const WeeklyPopularProducts = ({ content, products: dbProducts }: WeeklyPopularProductsProps) => {
-  const { selectProduct, deselectProduct, isSelected } = useSelectedProducts();
   const heading = content?.heading || "Trending Diary Giftsets";
   const selectedIds: string[] = (content?.items || [])
     .map((item: any) => item?.productId)
@@ -133,90 +130,55 @@ const WeeklyPopularProducts = ({ content, products: dbProducts }: WeeklyPopularP
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           {items.map((product, index) => {
-            const selected = isSelected(product.id || index);
-            const displayPrice = (() => {
-              const hasRange = typeof product.minPrice === "number" && typeof product.maxPrice === "number" && product.minPrice !== product.maxPrice;
-              if (hasRange) {
-                return `₹${product.minPrice!.toLocaleString()} – ₹${product.maxPrice!.toLocaleString()}`;
-              }
-              const base = typeof product.minPrice === "number" ? product.minPrice : product.price;
-              return typeof base === "number" && !Number.isNaN(base)
-                ? `${product.currency === 'INR' ? '₹' : '$'}${base.toLocaleString()}`
-                : 'On request';
-            })();
+            const base = typeof product.minPrice === "number" ? product.minPrice : product.price;
+            const displayPrice = typeof base === "number" && !Number.isNaN(base)
+              ? `₹${base.toLocaleString()}`
+              : 'On request';
+            const productHref = `/shop/${product.id || index}`;
 
             return (
               <div 
                 key={product.id || index} 
                 className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 relative justify-between"
               >
-                {/* Top Select Checkbox */}
-                <div className="absolute top-3.5 left-3.5 z-10">
-                  <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-xs border border-slate-100 flex items-center">
-                    <Checkbox
-                      checked={selected}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          selectProduct(product);
-                        } else {
-                          deselectProduct(product.id || index);
-                        }
-                      }}
-                      className="data-[state=checked]:bg-slate-900 data-[state=checked]:border-slate-900 rounded-md"
+                <Link href={productHref} className="block flex-1 flex flex-col">
+                  {/* Product Image */}
+                  <div className="relative bg-slate-50/70 aspect-[4/3] overflow-hidden p-5 flex items-center justify-center block">
+                    <Image
+                      src={product.image || PRODUCT_IMAGE_PLACEHOLDER}
+                      alt={product.name}
+                      fill
+                      unoptimized={isRemoteOrDataImage(product.image || "")}
+                      sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 100vw"
+                      className="object-contain p-3 transition-transform duration-500 group-hover:scale-108"
                     />
+                    <span className="absolute top-3.5 right-3.5 bg-white/90 backdrop-blur-md rounded-full p-2 shadow-xs border border-slate-100 transition-all duration-300 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0">
+                      <Image src="https://cdn.prod.website-files.com/63e857eaeaf853471d5335ff/63e9df775b939f51a0b22f6d_Icon.svg" alt="Wishlist" width={14} height={14} unoptimized />
+                    </span>
                   </div>
-                </div>
 
-                {/* Product Image */}
-                <Link href={`/shop/${product.id || index}`} className="relative bg-slate-50/70 aspect-[4/3] overflow-hidden p-5 flex items-center justify-center block">
-                  <Image
-                    src={product.image || PRODUCT_IMAGE_PLACEHOLDER}
-                    alt={product.name}
-                    fill
-                    unoptimized={isRemoteOrDataImage(product.image || "")}
-                    sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 100vw"
-                    className="object-contain p-3 transition-transform duration-500 group-hover:scale-108"
-                  />
-                  <span className="absolute top-3.5 right-3.5 bg-white/90 backdrop-blur-md rounded-full p-2 shadow-xs border border-slate-100 transition-all duration-300 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0">
-                    <Image src="https://cdn.prod.website-files.com/63e857eaeaf853471d5335ff/63e9df775b939f51a0b22f6d_Icon.svg" alt="Wishlist" width={14} height={14} unoptimized />
-                  </span>
-                </Link>
-
-                {/* Content */}
-                <div className="p-4 sm:p-5 flex flex-col flex-grow justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2 mb-1.5 group-hover:text-slate-700 transition-colors">
-                      <Link href={`/shop/${product.id || index}`}>
+                  {/* Content */}
+                  <div className="p-4 sm:p-5 flex flex-col flex-grow justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2 mb-1.5 group-hover:text-slate-700 transition-colors">
                         {product.name}
-                      </Link>
-                    </h3>
-                    <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed">
-                      {product.description}
-                    </p>
-                  </div>
-
-                  <div>
-                    <div className="flex items-baseline justify-between mb-3 pt-2 border-t border-slate-100">
-                      <div>
-                        <span className="text-[9px] uppercase font-semibold text-slate-400 block">Unit Rate</span>
-                        <p className="text-sm font-extrabold text-slate-900">{displayPrice}</p>
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-medium">Min. 50</span>
+                      </h3>
+                      <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed">
+                        {product.description}
+                      </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => selectProduct(product)}
-                      className={`w-full rounded-full font-semibold text-xs py-2 transition-all shadow-xs ${
-                        selected 
-                          ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                          : "bg-slate-900 hover:bg-slate-800 text-white"
-                      }`}
-                    >
-                      {selected ? "✓ Added" : "Add to Quote"}
-                    </button>
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between mt-auto">
+                      <div>
+                        <span className="text-[9px] uppercase font-semibold text-slate-400 block">Price</span>
+                        <p className="text-sm sm:text-base font-extrabold text-slate-900">{displayPrice}</p>
+                      </div>
+                      <span className="text-xs font-semibold text-slate-500 group-hover:text-[#0F172A] transition-colors flex items-center gap-1">
+                        View →
+                      </span>
+                    </div>
                   </div>
-                </div>
+                </Link>
               </div>
             );
           })}

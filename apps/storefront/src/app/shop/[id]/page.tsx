@@ -156,32 +156,6 @@ export default async function ProductDetailPage({
           tags={product.tags}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-12 border-t border-gray-100">
-          <div className="flex flex-col items-center text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-xl">
-            <div className="w-14 h-14 bg-[#0F172A] text-white rounded-full flex items-center justify-center mb-4">
-              <span className="text-xs font-bold uppercase tracking-wider">New Year</span>
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Customized Diary & Note Books</h3>
-            <p className="text-sm text-gray-600">Perfect for corporate gifting and personal use</p>
-          </div>
-
-          <div className="flex flex-col items-center text-center p-6 bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl">
-            <div className="w-14 h-14 bg-green-600 text-white rounded-full flex items-center justify-center mb-4">
-              <span className="text-xs font-bold uppercase tracking-wider">Bulk</span>
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Special Pricing</h3>
-            <p className="text-sm text-gray-600">Contact us for bulk orders and custom designs</p>
-          </div>
-
-          <div className="flex flex-col items-center text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl">
-            <div className="w-14 h-14 bg-purple-600 text-white rounded-full flex items-center justify-center mb-4">
-              <span className="text-xs font-bold uppercase tracking-wider">Quick</span>
-            </div>
-            <h3 className="font-semibold text-gray-900 mb-2">Fast Shipping</h3>
-            <p className="text-sm text-gray-600">Quick delivery options available across India</p>
-          </div>
-        </div>
-
         {relatedProducts.length > 0 && (
           <RelatedProducts products={relatedProducts} heading={chrome.related_heading} />
         )}

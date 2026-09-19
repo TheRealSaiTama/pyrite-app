@@ -1,15 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
-import { Star, MessageSquare, Tag, CheckCircle2, User, Send, ThumbsUp } from 'lucide-react';
+import { Star, MessageSquare, Tag, CheckCircle2, Send } from 'lucide-react';
 
-const TAG_VARIANTS = [
-  { accent: '#0F172A', bg: 'bg-[#0F172A]/[0.04]', border: 'border-[#0F172A]/20', text: 'text-slate-800' },
-  { accent: '#7c2d12', bg: 'bg-[#7c2d12]/[0.04]', border: 'border-[#7c2d12]/20', text: 'text-amber-900' },
-  { accent: '#15803d', bg: 'bg-[#15803d]/[0.04]', border: 'border-[#15803d]/20', text: 'text-emerald-900' },
-  { accent: '#6b21a8', bg: 'bg-[#6b21a8]/[0.04]', border: 'border-[#6b21a8]/20', text: 'text-purple-900' },
-];
 
 interface Review {
   id: string;
@@ -381,39 +374,25 @@ export default function ProductReviewsAndTags({
 
       {/* Tags Tab Content */}
       {activeTab === 'tags' && (
-        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-6">
+        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-4">
           <div>
             <h3 className="text-base font-bold text-gray-900 mb-1">
-              Keywords & Tags for {productName}
+              Product Tags
             </h3>
             <p className="text-xs text-gray-500">
-              Click any tag below to find related gift sets, diaries, and merchandise across our store.
+              Keywords and categories associated with {productName}.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2.5">
-            {displayTags.map((tag, index) => {
-              const variant = TAG_VARIANTS[index % TAG_VARIANTS.length];
-              return (
-                <Link
-                  key={`${tag}-${index}`}
-                  href={`/shop?q=${encodeURIComponent(tag)}`}
-                  className={`group inline-flex items-center gap-2.5 ${variant.bg} ${variant.border} border px-4 py-2.5 rounded-xl transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer`}
-                >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full transition-transform duration-200 group-hover:scale-125"
-                    style={{ backgroundColor: variant.accent }}
-                    aria-hidden
-                  />
-                  <span className={`text-sm font-semibold ${variant.text}`}>
-                    {tag}
-                  </span>
-                  <span className="text-xs opacity-40 group-hover:opacity-100 transition-opacity">
-                    ↗
-                  </span>
-                </Link>
-              );
-            })}
+          <div className="flex flex-wrap gap-2 pt-1">
+            {displayTags.map((tag, index) => (
+              <span
+                key={`${tag}-${index}`}
+                className="inline-block px-3 py-1.5 rounded-md bg-slate-100 text-slate-700 text-sm font-normal select-text cursor-default"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
         </div>
       )}

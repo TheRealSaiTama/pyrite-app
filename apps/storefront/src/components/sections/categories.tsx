@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'motion/react';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { getCategoryHref } from '@/lib/category-links';
+import { isRemoteOrDataImage } from '@/lib/product-image';
 
 interface Category {
   name: string;
@@ -256,10 +257,7 @@ const Categories = ({ content }: { content?: any }) => {
                         src={category.image_url}
                         alt={category.alt || category.name}
                         fill
-                        unoptimized={
-                          category.image_url.includes("drive.google.com") ||
-                          category.image_url.includes("googleusercontent.com")
-                        }
+                        unoptimized={isRemoteOrDataImage(category.image_url)}
                         sizes="(max-width: 640px) 280px, 300px"
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-108 opacity-90 group-hover:opacity-100"
                       />

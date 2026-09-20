@@ -39,9 +39,9 @@ export async function OPTIONS() {
 
 export async function GET(
   req: NextRequest,
-  ctx: { params: Promise<{ path: string[] }> | { path: string[] } }
+  ctx: { params: Promise<{ path: string[] }> }
 ) {
-  const resolved = "then" in ctx.params ? await ctx.params : ctx.params;
+  const resolved = await ctx.params;
   const parts = resolved.path || [];
   const bucket = parts[0] || "site-media";
   const objectPath = parts.slice(1).join("/");
@@ -60,11 +60,10 @@ export async function GET(
   for (const p of diskCandidates) {
     if (fs.existsSync(p)) {
       try {
-        let buf = fs.readFileSync(p);
-        const unwrapped = extractFileFromMultipart(buf);
-        buf = unwrapped.buf;
+        const raw = fs.readFileSync(p);
+        const unwrapped = extractFileFromMultipart(raw);
         const mime = unwrapped.mime || getMimeType(objectPath);
-        return new NextResponse(buf, {
+        return new NextResponse(new Uint8Array(unwrapped.buf), {
           status: 200,
           headers: {
             ...CORS,
@@ -89,17 +88,16 @@ export async function GET(
   );
 
   if (asset && asset.data_base64) {
-    let buf = Buffer.from(asset.data_base64, "base64");
-    const unwrapped = extractFileFromMultipart(buf);
-    buf = unwrapped.buf;
+    const raw = Buffer.from(asset.data_base64, "base64");
+    const unwrapped = extractFileFromMultipart(raw);
     const mime = unwrapped.mime || asset.mime_type || getMimeType(objectPath);
     try {
       const tmpPath = path.join("/tmp", "pyrite-cms", "media", bucket, objectPath);
       fs.mkdirSync(path.dirname(tmpPath), { recursive: true });
-      fs.writeFileSync(tmpPath, buf);
+      fs.writeFileSync(tmpPath, unwrapped.buf);
     } catch {}
 
-    return new NextResponse(buf, {
+    return new NextResponse(new Uint8Array(unwrapped.buf), {
       status: 200,
       headers: {
         ...CORS,

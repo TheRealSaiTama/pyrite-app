@@ -21,18 +21,20 @@ import { cmsCatalog, cmsItemByIdOrSlug } from "@/lib/cms/load";
 
 export const revalidate = 0;
 
-async function getCatalog() {
+async function getCatalog(): Promise<any[]> {
   const live = filterLiveCatalog(cmsCatalog() as any[]);
   return live.map((row) => ({
     ...row,
     id: String(row.id),
+    image: row.imageUrl || "",
+    currency: "INR" as const,
     minPrice: row.minPrice,
     maxPrice: row.maxPrice,
     imageUrl: row.imageUrl,
   }));
 }
 
-async function getHomeSections() {
+async function getHomeSections(): Promise<Record<string, any>> {
   const sections = await getPageSections("home");
   return {
     hero: {},
@@ -44,6 +46,7 @@ async function getHomeSections() {
     popular: {},
     cashback: {},
     tabbed_products: {},
+    best_deals_tabbed: undefined,
     why_choose_us: {},
     satisfaction: {},
     cashback_bottom: {},
@@ -111,6 +114,8 @@ export default async function HomePage() {
         megaMenu={megaMenu}
         logoUrl={settings?.logoUrl}
         brandName={settings?.brandName}
+        phone={settings?.phone}
+        email={settings?.email}
       />
 
       <main>

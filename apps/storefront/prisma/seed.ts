@@ -37,24 +37,35 @@ async function seedDiaries() {
         const minPrice = prices[0];
         const maxPrice = prices.length > 1 ? prices[1] : prices[0];
         
+        const slug = (record['Product Name'] || 'diary')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '') || `diary-${Date.now()}`;
+        const tags = (record['Tags'] || '')
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean);
+        
         await prisma.diary.upsert({
-          where: { name: record['Product Name'] },
+          where: { slug },
           update: {
-            description: record['Short Description'],
-            minPrice: isNaN(minPrice) ? null : minPrice,
-            maxPrice: isNaN(maxPrice) ? null : maxPrice,
-            imageUrl: record['Product image'],
-            category: record['Categories'],
-            tags: record['Tags'],
-          },
-          create: {
             name: record['Product Name'],
             description: record['Short Description'],
             minPrice: isNaN(minPrice) ? null : minPrice,
             maxPrice: isNaN(maxPrice) ? null : maxPrice,
             imageUrl: record['Product image'],
             category: record['Categories'],
-            tags: record['Tags'],
+            tags,
+          },
+          create: {
+            slug,
+            name: record['Product Name'],
+            description: record['Short Description'],
+            minPrice: isNaN(minPrice) ? null : minPrice,
+            maxPrice: isNaN(maxPrice) ? null : maxPrice,
+            imageUrl: record['Product image'],
+            category: record['Categories'],
+            tags,
           },
         });
       }
@@ -97,23 +108,34 @@ async function seedProducts() {
                 const minPrice = prices[0];
                 const maxPrice = prices.length > 1 ? prices[1] : prices[0];
 
+                const slug = (record['Product Name'] || 'product')
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, '-')
+                  .replace(/^-|-$/g, '') || `product-${Date.now()}`;
+                const tags = (record['Tags'] || '')
+                  .split(',')
+                  .map((t) => t.trim())
+                  .filter(Boolean);
+
                 await prisma.product.upsert({
-                    where: { name: record['Product Name'] },
+                    where: { slug },
                     update: {
-                        description: record['Short Description'],
-                        minPrice: isNaN(minPrice) ? null : minPrice,
-                        maxPrice: isNaN(maxPrice) ? null : maxPrice,
-                        imageUrl: record['Product image'],
-                        tags: record['Tags'],
-                        category: record['Categories'] || 'Corporate Gift Set',
-                    },
-                    create: {
                         name: record['Product Name'],
                         description: record['Short Description'],
                         minPrice: isNaN(minPrice) ? null : minPrice,
                         maxPrice: isNaN(maxPrice) ? null : maxPrice,
                         imageUrl: record['Product image'],
-                        tags: record['Tags'],
+                        tags,
+                        category: record['Categories'] || 'Corporate Gift Set',
+                    },
+                    create: {
+                        slug,
+                        name: record['Product Name'],
+                        description: record['Short Description'],
+                        minPrice: isNaN(minPrice) ? null : minPrice,
+                        maxPrice: isNaN(maxPrice) ? null : maxPrice,
+                        imageUrl: record['Product image'],
+                        tags,
                         category: record['Categories'] || 'Corporate Gift Set',
                     },
                 });

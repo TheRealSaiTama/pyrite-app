@@ -15,9 +15,9 @@ export const revalidate = 0;
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<Metadata> {
-  const resolvedParams = "then" in params ? await params : params;
+  const resolvedParams = await params;
   const product = await getProduct(resolvedParams.id);
   if (!product) return {};
   const title = product.seoTitle || product.name;
@@ -95,9 +95,9 @@ async function getRelatedProducts(
 export default async function ProductDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }> | { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const resolvedParams = "then" in params ? await params : params;
+  const resolvedParams = await params;
   const [product, storefront, chrome] = await Promise.all([
     getProduct(resolvedParams.id),
     getStorefrontData(),
@@ -118,6 +118,8 @@ export default async function ProductDetailPage({
         megaMenu={megaMenu}
         logoUrl={settings?.logoUrl}
         brandName={settings?.brandName}
+        phone={settings?.phone}
+        email={settings?.email}
       />
       <main className="container mx-auto px-4 py-4">
         <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6">

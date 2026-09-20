@@ -42,18 +42,37 @@ function getFileIdFromUrl(url: string): string | null {
   return match ? match[1] : null;
 }
 
+function stemCat(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .map((w) => {
+      if (w.endsWith("ies") && w.length > 4) return w.slice(0, -3) + "y";
+      if (w.endsWith("es") && w.length > 4 && !w.endsWith("ses") && !w.endsWith("zes")) return w.slice(0, -2);
+      if (w.endsWith("s") && !w.endsWith("ss") && w.length > 3) return w.slice(0, -1);
+      return w;
+    })
+    .join(" ");
+}
+
 function categoryMatches(productCategory: string, filterCat: string): boolean {
-  const hay = productCategory.toLowerCase();
   const needle = filterCat.toLowerCase().trim();
   if (!needle) return true;
-  if (hay.includes(needle)) return true;
+  const parts = productCategory.split(',').map((p) => p.toLowerCase().trim()).filter(Boolean);
+  if (parts.length === 0) return false;
+  const stemNeedle = stemCat(needle);
   const compact = (s: string) => s.replace(/[^a-z0-9]+/g, " ").trim();
-  const h = compact(hay);
   const n = compact(needle);
-  if (h.includes(n) || n.includes(h)) return true;
-  if (n.endsWith("s") && h.includes(n.slice(0, -1))) return true;
-  if (h.endsWith("s") && n.includes(h.slice(0, -1))) return true;
-  return false;
+  return parts.some((part) => {
+    if (part === needle) return true;
+    const h = compact(part);
+    if (h === n || h.includes(n) || n.includes(h)) return true;
+    const stemPart = stemCat(part);
+    if (stemPart === stemNeedle || stemPart.includes(stemNeedle) || stemNeedle.includes(stemPart)) return true;
+    return false;
+  });
 }
 
 function filterAndSortProducts(products: ShopProduct[], filters: Filters): ShopProduct[] {
@@ -175,8 +194,8 @@ export default function ShopClient({
     setFilters((prevFilters: Filters) => ({
       ...prevFilters,
       category: checked 
-        ? [...prevFilters.category, value as string]
-        : prevFilters.category.filter((c: string) => c !== value),
+        ? [...prevFilters.category.filter((c: string) => !categoryMatches(value, c)), value]
+        : prevFilters.category.filter((c: string) => !categoryMatches(value, c)),
     }));
   };
 
@@ -211,7 +230,17 @@ export default function ShopClient({
     });
   };
 
-  const uniqueCategories = useMemo(() => Array.from(new Set(combinedProducts.map((p: ShopProduct) => p.category).filter(Boolean) as string[])), [combinedProducts]);
+  const uniqueCategories = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of combinedProducts) {
+      if (!p.category) continue;
+      const parts = p.category.split(',').map((c) => c.trim()).filter(Boolean);
+      for (const part of parts) {
+        set.add(part);
+      }
+    }
+    return Array.from(set).sort();
+  }, [combinedProducts]);
 
   return (
     <main className="container mx-auto px-4 py-12">
@@ -237,6 +266,7 @@ export default function ShopClient({
                             type="checkbox"
                             className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
                             value={cat}
+                            checked={filters.category.some((c: string) => categoryMatches(cat, c))}
                             onChange={handleCategoryChange}
                           />
                         </label>

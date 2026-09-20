@@ -30,6 +30,8 @@ export default async function ShopPage() {
         megaMenu={storefront.megaMenu}
         logoUrl={storefront.settings?.logoUrl}
         brandName={storefront.settings?.brandName}
+        phone={storefront.settings?.phone}
+        email={storefront.settings?.email}
       />
       <Suspense
         fallback={

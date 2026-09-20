@@ -37,9 +37,9 @@ export default function ThankYouClient({
     clearCart();
   }, [clearCart]);
 
-  const customerCarePhone = settings?.phone || settings?.whatsappNumber || "+91 9899223130";
+  const customerCarePhone = settings?.phone || settings?.whatsappNumber || "+91 87966 84365";
   const rawPhone = customerCarePhone.replace(/[^0-9]/g, "");
-  const whatsappUrl = `https://wa.me/${rawPhone || "919899223130"}?text=${encodeURIComponent(
+  const whatsappUrl = `https://wa.me/${rawPhone || "918796684365"}?text=${encodeURIComponent(
     "Hi Pyrite team, I just placed an order request on your website and would like to check on the customization and proforma invoice details."
   )}`;
   const brandName = settings?.brandName || "Pyrite";
@@ -51,6 +51,8 @@ export default function ThankYouClient({
         megaMenu={megaMenu}
         logoUrl={settings?.logoUrl}
         brandName={settings?.brandName}
+        phone={settings?.phone}
+        email={settings?.email}
       />
 
       <main className="flex-1 container mx-auto px-4 py-8 md:py-14">

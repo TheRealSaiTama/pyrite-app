@@ -96,6 +96,7 @@ export default function RelatedProducts({ products, heading }: RelatedProductsPr
                     src={imageUrl}
                     alt={product.name}
                     fill
+                    unoptimized={isRemoteOrDataImage(imageUrl)}
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                     sizes="(max-width: 768px) 50vw, 20vw"
                   />

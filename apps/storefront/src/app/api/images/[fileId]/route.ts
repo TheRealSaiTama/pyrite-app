@@ -4,9 +4,9 @@ import { Readable } from 'stream';
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ fileId: string }> } | { params: { fileId: string } }
+  context: { params: Promise<{ fileId: string }> }
 ) {
-  const resolvedParams = await Promise.resolve((context as any).params);
+  const resolvedParams = await context.params;
   const param = decodeURIComponent(resolvedParams.fileId);
 
   if (!param) {

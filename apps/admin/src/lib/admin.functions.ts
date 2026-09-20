@@ -9,7 +9,7 @@ export const updateSection = createServerFn({ method: "POST" })
   .inputValidator((d) =>
     z
       .object({
-        id: z.string().uuid(),
+        id: z.string().min(1),
         title: z.string().optional().nullable(),
         content: z.record(z.string(), z.any()),
         enabled: z.boolean().optional(),
@@ -36,7 +36,7 @@ export const reorderSections = createServerFn({ method: "POST" })
     z
       .object({
         pageKey: z.string(),
-        ordered: z.array(z.object({ id: z.string().uuid(), sort_order: z.number().int() })),
+        ordered: z.array(z.object({ id: z.string().min(1), sort_order: z.number().int() })),
       })
       .parse(d),
   )
@@ -100,7 +100,7 @@ export const upsertSeo = createServerFn({ method: "POST" })
   });
 
 const navLinkShape = z.object({
-  id: z.string().uuid().optional(),
+  id: z.string().min(1).optional(),
   group_key: z.string(),
   label: z.string().min(1),
   href: z.string().min(1),
@@ -115,7 +115,7 @@ export const saveNavLinks = createServerFn({ method: "POST" })
       .object({
         group_key: z.string(),
         links: z.array(navLinkShape),
-        deleted_ids: z.array(z.string().uuid()).default([]),
+        deleted_ids: z.array(z.string().min(1)).default([]),
       })
       .parse(d),
   )
@@ -148,48 +148,117 @@ export const saveNavLinks = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+function sanitizeSlug(raw: unknown): string {
+  if (typeof raw !== "string") return "item";
+  return (
+    raw
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "item"
+  );
+}
+
+async function ensureUniqueSlug(
+  supabase: any,
+  table: "products" | "diaries",
+  rawSlug: string,
+  excludeId?: string
+): Promise<string> {
+  const baseSlug = sanitizeSlug(rawSlug);
+
+  let candidate = baseSlug;
+  let counter = 1;
+  while (true) {
+    let pQuery = supabase.from("products").select("id").eq("slug", candidate);
+    if (table === "products" && excludeId) pQuery = pQuery.neq("id", excludeId);
+    const { data: pData } = await pQuery.maybeSingle();
+
+    let dQuery = supabase.from("diaries").select("id").eq("slug", candidate);
+    if (table === "diaries" && excludeId) dQuery = dQuery.neq("id", excludeId);
+    const { data: dData } = await dQuery.maybeSingle();
+
+    if (!pData && !dData) return candidate;
+    candidate = `${baseSlug}-${counter}`;
+    counter++;
+  }
+}
+
+const safePrice = z.preprocess((val) => {
+  if (val === "" || val === null || val === undefined) return null;
+  const num = Number(val);
+  return Number.isFinite(num) ? num : null;
+}, z.number().nullable().optional());
+
+const safeMoq = z.preprocess((val) => {
+  if (val === "" || val === null || val === undefined) return 50;
+  const num = Number(val);
+  return Number.isFinite(num) && num > 0 ? Math.round(num) : 50;
+}, z.number().int().optional().default(50));
+
+const safePages = z.preprocess((val) => {
+  if (val === "" || val === null || val === undefined) return null;
+  const num = Number(val);
+  return Number.isFinite(num) && num > 0 ? Math.round(num) : null;
+}, z.number().int().nullable().optional());
+
+const safeArray = z.preprocess(
+  (val) => (Array.isArray(val) ? val.filter((x): x is string => typeof x === "string" && Boolean(x)) : []),
+  z.array(z.string()).default([]),
+);
+
+const safeFeatures = z.preprocess(
+  (val) => (typeof val === "object" && val !== null ? val : {}),
+  z.record(z.any()).default({}),
+);
+
 const productShape = z.object({
-  slug: z.string().min(1).regex(/^[A-Za-z0-9-_]+$/, "letters, digits, dashes and underscores only"),
-  name: z.string().min(1),
-  description: z.string().nullable(),
-  min_price: z.number().int().nullable(),
-  max_price: z.number().int().nullable(),
-  category: z.string().nullable(),
-  tags: z.array(z.string()),
-  image_url: z.string().nullable(),
-  featured: z.boolean(),
-  enabled: z.boolean(),
-  gallery: z.array(z.string()).default([]),
-  features: z.record(z.object({ show: z.boolean(), value: z.string() })).default({}),
-  seo_title: z.string().nullable(),
-  seo_description: z.string().nullable(),
-  moq: z.number().int().nullable().optional(),
+  slug: z.preprocess(sanitizeSlug, z.string().min(1).regex(/^[A-Za-z0-9-_]+$/)),
+  name: z.preprocess((v) => (typeof v === "string" ? v.trim() : ""), z.string().min(1)),
+  description: z.string().nullable().optional(),
+  min_price: safePrice,
+  max_price: safePrice,
+  category: z.string().nullable().optional(),
+  tags: safeArray,
+  image_url: z.string().nullable().optional(),
+  featured: z.boolean().default(false),
+  enabled: z.boolean().default(true),
+  gallery: safeArray,
+  features: safeFeatures,
+  seo_title: z.string().nullable().optional(),
+  seo_description: z.string().nullable().optional(),
+  moq: safeMoq,
 });
 
 export const saveProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({ id: z.string().uuid().optional(), values: productShape }).parse(d),
+    z.object({ id: z.string().min(1).optional(), values: productShape }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const cleanSlug = await ensureUniqueSlug(context.supabase, "products", data.values.slug, data.id);
+    const payload = { ...data.values, slug: cleanSlug };
+
     if (data.id) {
-      let { error } = await context.supabase.from("products").update(data.values).eq("id", data.id);
+      let { error } = await context.supabase.from("products").update(payload as any).eq("id", data.id);
       if (error && error.message?.includes("column \"moq\" of relation \"products\" does not exist")) {
-        const { moq: _, ...safeValues } = data.values as any;
+        const { moq: _, ...safeValues } = payload as any;
         const res = await context.supabase.from("products").update(safeValues).eq("id", data.id);
         error = res.error;
       }
       if (error) throw new Error(error.message);
-      await notifyStorefront(["/", "/shop", `/shop/${data.id}`, `/shop/${data.values.slug}`]);
-      return { ok: true, id: data.id };
+      await notifyStorefront(["/", "/shop", `/shop/${data.id}`, `/shop/${payload.slug}`]);
+      return { ok: true, id: data.id, slug: cleanSlug };
     }
     let { data: row, error } = await context.supabase
       .from("products")
-      .insert(data.values)
+      .insert(payload as any)
       .select("id")
       .single();
     if (error && error.message?.includes("column \"moq\" of relation \"products\" does not exist")) {
-      const { moq: _, ...safeValues } = data.values as any;
+      const { moq: _, ...safeValues } = payload as any;
       const res = await context.supabase
         .from("products")
         .insert(safeValues)
@@ -199,13 +268,13 @@ export const saveProduct = createServerFn({ method: "POST" })
       error = res.error;
     }
     if (error) throw new Error(error.message);
-    await notifyStorefront(["/", "/shop", `/shop/${row?.id || ""}`]);
-    return { ok: true, id: row?.id };
+    await notifyStorefront(["/", "/shop", `/shop/${row?.id || ""}`, `/shop/${cleanSlug}`]);
+    return { ok: true, id: row?.id, slug: cleanSlug };
   });
 
 export const deleteProduct = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d) => z.object({ id: z.string().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("products").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -214,51 +283,54 @@ export const deleteProduct = createServerFn({ method: "POST" })
   });
 
 const diaryShape = z.object({
-  slug: z.string().min(1).regex(/^[A-Za-z0-9-_]+$/),
-  name: z.string().min(1),
-  description: z.string().nullable(),
-  min_price: z.number().int().nullable(),
-  max_price: z.number().int().nullable(),
-  category: z.string().nullable(),
-  tags: z.array(z.string()),
-  color: z.string().nullable(),
-  size: z.string().nullable(),
-  pages: z.number().int().nullable(),
-  cover_type: z.string().nullable(),
-  image_url: z.string().nullable(),
-  featured: z.boolean(),
-  enabled: z.boolean(),
-  gallery: z.array(z.string()).default([]),
-  features: z.record(z.object({ show: z.boolean(), value: z.string() })).default({}),
-  seo_title: z.string().nullable(),
-  seo_description: z.string().nullable(),
-  moq: z.number().int().nullable().optional(),
+  slug: z.preprocess(sanitizeSlug, z.string().min(1).regex(/^[A-Za-z0-9-_]+$/)),
+  name: z.preprocess((v) => (typeof v === "string" ? v.trim() : ""), z.string().min(1)),
+  description: z.string().nullable().optional(),
+  min_price: safePrice,
+  max_price: safePrice,
+  category: z.string().nullable().optional(),
+  tags: safeArray,
+  color: z.string().nullable().optional(),
+  size: z.string().nullable().optional(),
+  pages: safePages,
+  cover_type: z.string().nullable().optional(),
+  image_url: z.string().nullable().optional(),
+  featured: z.boolean().default(false),
+  enabled: z.boolean().default(true),
+  gallery: safeArray,
+  features: safeFeatures,
+  seo_title: z.string().nullable().optional(),
+  seo_description: z.string().nullable().optional(),
+  moq: safeMoq,
 });
 
 export const saveDiary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
-    z.object({ id: z.string().uuid().optional(), values: diaryShape }).parse(d),
+    z.object({ id: z.string().min(1).optional(), values: diaryShape }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    const cleanSlug = await ensureUniqueSlug(context.supabase, "diaries", data.values.slug, data.id);
+    const payload = { ...data.values, slug: cleanSlug };
+
     if (data.id) {
-      let { error } = await context.supabase.from("diaries").update(data.values).eq("id", data.id);
+      let { error } = await context.supabase.from("diaries").update(payload as any).eq("id", data.id);
       if (error && error.message?.includes("column \"moq\" of relation \"diaries\" does not exist")) {
-        const { moq: _, ...safeValues } = data.values as any;
+        const { moq: _, ...safeValues } = payload as any;
         const res = await context.supabase.from("diaries").update(safeValues).eq("id", data.id);
         error = res.error;
       }
       if (error) throw new Error(error.message);
-      await notifyStorefront(["/", "/shop", `/shop/${data.id}`, `/shop/${data.values.slug}`]);
-      return { ok: true, id: data.id };
+      await notifyStorefront(["/", "/shop", `/shop/${data.id}`, `/shop/${payload.slug}`]);
+      return { ok: true, id: data.id, slug: cleanSlug };
     }
     let { data: row, error } = await context.supabase
       .from("diaries")
-      .insert(data.values)
+      .insert(payload as any)
       .select("id")
       .single();
     if (error && error.message?.includes("column \"moq\" of relation \"diaries\" does not exist")) {
-      const { moq: _, ...safeValues } = data.values as any;
+      const { moq: _, ...safeValues } = payload as any;
       const res = await context.supabase
         .from("diaries")
         .insert(safeValues)
@@ -268,13 +340,13 @@ export const saveDiary = createServerFn({ method: "POST" })
       error = res.error;
     }
     if (error) throw new Error(error.message);
-    await notifyStorefront(["/", "/shop", `/shop/${row?.id || ""}`]);
-    return { ok: true, id: row?.id };
+    await notifyStorefront(["/", "/shop", `/shop/${row?.id || ""}`, `/shop/${cleanSlug}`]);
+    return { ok: true, id: row?.id, slug: cleanSlug };
   });
 
 export const deleteDiary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .inputValidator((d) => z.object({ id: z.string().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("diaries").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -310,11 +382,70 @@ export const registerMedia = createServerFn({ method: "POST" })
 
 export const deleteMedia = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ id: z.string().uuid(), path: z.string() }).parse(d))
+  .inputValidator((d) => z.object({ id: z.string().min(1), path: z.string() }).parse(d))
   .handler(async ({ data, context }) => {
-    await context.supabase.storage.from("site-media").remove([data.path]);
+    const cleanPath = data.path.replace(/^site-media\//, "");
+    try {
+      await context.supabase.storage.from("site-media").remove([cleanPath]);
+    } catch {}
     const { error } = await context.supabase.from("media_assets").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const saveCatalogMetadata = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        customCategories: z.array(
+          z.object({
+            name: z.string(),
+            seoTitle: z.string().optional(),
+            seoDescription: z.string().optional(),
+          })
+        ),
+        customSubcategories: z.record(z.string(), z.array(z.string())),
+        categorySeo: z.record(
+          z.string(),
+          z.object({
+            seoTitle: z.string(),
+            seoDescription: z.string(),
+            ogImageUrl: z.string(),
+          })
+        ),
+      })
+      .parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { data: existing } = await context.supabase
+      .from("page_sections")
+      .select("id")
+      .eq("page_key", "catalog")
+      .eq("section_key", "categories")
+      .maybeSingle();
+
+    if (existing?.id) {
+      const { error } = await context.supabase
+        .from("page_sections")
+        .update({
+          content: data as any,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await context.supabase.from("page_sections").insert({
+        page_key: "catalog",
+        section_key: "categories",
+        title: "Catalog Categories",
+        sort_order: 0,
+        enabled: true,
+        content: data as any,
+      });
+      if (error) throw new Error(error.message);
+    }
+    await notifyStorefront(["/", "/shop"]);
     return { ok: true };
   });
 

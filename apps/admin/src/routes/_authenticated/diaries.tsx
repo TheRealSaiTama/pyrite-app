@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,6 +57,41 @@ function DiariesPage() {
       return data as Diary[];
     },
   });
+
+  const { data: catalogMeta } = useQuery({
+    queryKey: ["catalog-categories-metadata"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("page_sections")
+        .select("content")
+        .eq("page_key", "catalog")
+        .eq("section_key", "categories")
+        .maybeSingle();
+      if (error || !data?.content) return null;
+      return data.content as {
+        customCategories?: { name: string }[];
+        customSubcategories?: Record<string, string[]>;
+      };
+    },
+  });
+
+  const allCategories = useMemo(() => {
+    let fromStorage: string[] = [];
+    if (typeof window !== "undefined") {
+      try {
+        const raw = JSON.parse(localStorage.getItem("gv_custom_categories") || "[]");
+        if (Array.isArray(raw)) {
+          fromStorage = raw.map((item: any) => (typeof item === "string" ? item : item?.name)).filter(Boolean);
+        }
+      } catch {}
+    }
+    const fromMeta = (catalogMeta?.customCategories || []).map((c) => c.name).filter(Boolean);
+    return Array.from(new Set([...STOREFRONT_CATEGORIES, ...fromStorage, ...fromMeta]));
+  }, [catalogMeta]);
+
+  const customSubcategories = useMemo(() => {
+    return catalogMeta?.customSubcategories || {};
+  }, [catalogMeta]);
 
   const filtered = (data ?? []).filter((d) => !search || d.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -117,6 +152,8 @@ function DiariesPage() {
           {editing && (
             <DiaryForm
               diary={editing}
+              allCategories={allCategories}
+              customSubcategories={customSubcategories}
               onClose={() => setEditing(null)}
               onSaved={() => { qc.invalidateQueries({ queryKey: ["diaries-admin"] }); setEditing(null); }}
             />
@@ -157,10 +194,30 @@ const STOREFRONT_SUBCATEGORIES: Record<string, string[]> = {
   "EXHIBITION VISITOR'S GIFT IDEAS": ["Giveaways & Promos"],
 };
 
-function DiaryForm({ diary, onClose, onSaved }: { diary: Diary; onClose: () => void; onSaved: () => void }) {
+function DiaryForm({
+  diary,
+  onClose,
+  onSaved,
+  allCategories = STOREFRONT_CATEGORIES,
+  customSubcategories = {},
+}: {
+  diary: Diary;
+  onClose: () => void;
+  onSaved: () => void;
+  allCategories?: string[];
+  customSubcategories?: Record<string, string[]>;
+}) {
   const [v, setV] = useState(diary);
   const [saving, setSaving] = useState(false);
   const [catSearch, setCatSearch] = useState("");
+  const slugTouched = useRef(Boolean(diary.id));
+
+  useEffect(() => {
+    if (slugTouched.current) return;
+    const auto = slugify(v.name);
+    setV((prev) => (prev.slug === auto ? prev : { ...prev, slug: auto }));
+  }, [v.name]);
+
   const runSave = useServerFn(saveDiary);
   const runDelete = useServerFn(deleteDiary);
   const s = <K extends keyof Diary>(k: K, val: Diary[K]) => setV((p) => ({ ...p, [k]: val }));
@@ -168,19 +225,46 @@ function DiaryForm({ diary, onClose, onSaved }: { diary: Diary; onClose: () => v
   async function handleSave() {
     setSaving(true);
     try {
+      const safeName = (v.name || "").trim();
+      if (!safeName) {
+        toast.error("Name is required");
+        setSaving(false);
+        return;
+      }
+      const price = v.min_price != null && v.min_price !== ("" as any) && !Number.isNaN(Number(v.min_price))
+        ? Number(v.min_price)
+        : null;
+      const maxPrice = v.max_price != null && v.max_price !== ("" as any) && !Number.isNaN(Number(v.max_price))
+        ? Number(v.max_price)
+        : price;
+      const safePages = v.pages != null && v.pages !== ("" as any) && !Number.isNaN(Number(v.pages))
+        ? Math.round(Number(v.pages))
+        : null;
+      const safeSlug = slugify(v.slug || safeName) || `diary-${Date.now()}`;
+
       await runSave({
         data: {
           id: diary.id || undefined,
           values: {
-            slug: v.slug || slugify(v.name),
-            name: v.name,
+            slug: safeSlug,
+            name: safeName,
             description: v.description || null,
-            min_price: v.min_price, max_price: v.max_price,
-            category: v.category || null, tags: v.tags,
-            color: v.color || null, size: v.size || null,
-            pages: v.pages, cover_type: v.cover_type || null,
+            min_price: price,
+            max_price: maxPrice,
+            category: v.category || null,
+            tags: v.tags || [],
+            color: v.color || null,
+            size: v.size || null,
+            pages: safePages,
+            cover_type: v.cover_type || null,
             image_url: v.image_url || null,
-            featured: v.featured, enabled: v.enabled,
+            featured: v.featured,
+            enabled: v.enabled,
+            gallery: (diary as any).gallery || [],
+            features: (diary as any).features || {},
+            seo_title: (diary as any).seo_title || null,
+            seo_description: (diary as any).seo_description || null,
+            moq: (diary as any).moq || 50,
           },
         },
       });
@@ -211,11 +295,14 @@ function DiaryForm({ diary, onClose, onSaved }: { diary: Diary; onClose: () => v
   }
 
   const filteredCats = catSearch
-    ? STOREFRONT_CATEGORIES.filter((c) => c.toLowerCase().includes(catSearch.toLowerCase()))
-    : STOREFRONT_CATEGORIES;
+    ? allCategories.filter((c) => c.toLowerCase().includes(catSearch.toLowerCase()))
+    : allCategories;
 
   const availableSubcats = Array.from(new Set(
-    selectedCats.flatMap(cat => STOREFRONT_SUBCATEGORIES[cat.toUpperCase()] || [])
+    selectedCats.flatMap(cat => [
+      ...(STOREFRONT_SUBCATEGORIES[cat.toUpperCase()] || []),
+      ...(customSubcategories[cat.toUpperCase()] || []),
+    ])
   ));
 
   const selectedSubcats = (v.tags || []).filter(t => availableSubcats.includes(t));
@@ -230,7 +317,18 @@ function DiaryForm({ diary, onClose, onSaved }: { diary: Diary; onClose: () => v
   return (
     <div className="space-y-5 pt-5">
       <div><Label>Name</Label><Input value={v.name} onChange={(e) => s("name", e.target.value)} className="mt-1.5" /></div>
-      <div><Label>Slug</Label><Input value={v.slug} onChange={(e) => s("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))} placeholder={slugify(v.name)} className="mt-1.5 font-mono text-xs" /></div>
+      <div>
+        <Label>Slug</Label>
+        <Input
+          value={v.slug}
+          onChange={(e) => {
+            slugTouched.current = true;
+            s("slug", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"));
+          }}
+          placeholder={slugify(v.name) || "auto-from-name"}
+          className="mt-1.5 font-mono text-xs"
+        />
+      </div>
       <div><Label>Image</Label><div className="mt-1.5"><MediaPicker value={v.image_url ?? ""} onChange={(url) => s("image_url", url)} /></div></div>
       <div>
         <Label htmlFor="diary-highlights">Product Highlights</Label>
@@ -248,8 +346,8 @@ function DiaryForm({ diary, onClose, onSaved }: { diary: Diary; onClose: () => v
       </div>
       
       <div className="grid grid-cols-2 gap-3">
-        <div><Label>Min price (₹)</Label><Input type="number" value={v.min_price ?? ""} onChange={(e) => s("min_price", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5" /></div>
-        <div><Label>Max price (₹)</Label><Input type="number" value={v.max_price ?? ""} onChange={(e) => s("max_price", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5" /></div>
+        <div><Label>Min price (₹)</Label><Input type="number" step="any" value={v.min_price ?? ""} onChange={(e) => s("min_price", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5" /></div>
+        <div><Label>Max price (₹)</Label><Input type="number" step="any" value={v.max_price ?? ""} onChange={(e) => s("max_price", e.target.value === "" ? null : Number(e.target.value))} className="mt-1.5" /></div>
         
         <div><Label>Size</Label><Input value={v.size ?? ""} onChange={(e) => s("size", e.target.value)} placeholder="A5, B5…" className="mt-1.5" /></div>
         <div><Label>Colour</Label><Input value={v.color ?? ""} onChange={(e) => s("color", e.target.value)} className="mt-1.5" /></div>
@@ -414,4 +512,12 @@ function DiaryForm({ diary, onClose, onSaved }: { diary: Diary; onClose: () => v
   );
 }
 
-function slugify(s: string) { return s.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-"); }
+function slugify(s: string) {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}

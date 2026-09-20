@@ -54,6 +54,8 @@ export function isRemoteOrDataImage(url: string): boolean {
     url.startsWith("https://") ||
     url.startsWith("data:") ||
     url.includes("drive.google.com") ||
-    url.includes("googleusercontent.com")
+    url.includes("googleusercontent.com") ||
+    url.startsWith("/api/cms/") ||
+    url.startsWith("/cms-media/")
   );
 }

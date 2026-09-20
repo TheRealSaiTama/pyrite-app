@@ -8,7 +8,7 @@ import { AlertCircle, ArrowLeft, Check, ShieldCheck, Loader2 } from "lucide-reac
 import Header from "@/components/sections/header";
 import Footer from "@/components/sections/footer";
 import { useCart } from "@/context/ProductContext";
-import { resolveProductImage } from "@/lib/product-image";
+import { resolveProductImage, isRemoteOrDataImage } from "@/lib/product-image";
 
 const INDIAN_STATES = [
   "Delhi",
@@ -167,6 +167,8 @@ export default function CheckoutClient({
         megaMenu={megaMenu}
         logoUrl={settings?.logoUrl}
         brandName={settings?.brandName}
+        phone={settings?.phone}
+        email={settings?.email}
       />
 
       <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
@@ -471,6 +473,7 @@ export default function CheckoutClient({
                           src={resolveProductImage(item.image)}
                           alt={item.name}
                           fill
+                          unoptimized={isRemoteOrDataImage(resolveProductImage(item.image))}
                           className="object-cover"
                         />
                       </div>

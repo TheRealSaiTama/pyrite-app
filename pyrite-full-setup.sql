@@ -691,7 +691,7 @@ ALTER TABLE public.diaries
 
 -- Update site_settings for Pyrite
 INSERT INTO public.site_settings (id, brand_name, tagline, primary_color, whatsapp_number, phone, email, address)
-VALUES (1, 'Pyrite', 'Custom Corporate Diaries & Luxury Gift Sets', '#0F172A', '+919899223130', '+919899223130', 'info@pyrite.in', 'Delhi, India')
+VALUES (1, 'Pyrite', 'Custom Corporate Diaries & Luxury Gift Sets', '#0F172A', '+918796684365', '+918796684365', 'info@pyrite.in', 'Delhi, India')
 ON CONFLICT (id) DO UPDATE SET
   brand_name = EXCLUDED.brand_name,
   tagline = EXCLUDED.tagline,

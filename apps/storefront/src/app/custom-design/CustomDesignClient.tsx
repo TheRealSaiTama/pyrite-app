@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import Image from "next/image";
 import Header from "@/components/sections/header";
 import Footer from "@/components/sections/footer";
+import { isRemoteOrDataImage } from "@/lib/product-image";
 
 const DEFAULT_TECHNIQUES = [
   { title: "Thermal Logo Debossing", body: "Debossing or blind debossing is and will continue to be the undisputed favourite among the logo debossings. It is charmingly unobtrusive, of high-quality and pleasant to the touch.", image_url: "/custom-design/thermal-debossing.jpg" },
@@ -109,6 +110,8 @@ export default function CustomDesignClient({
         megaMenu={megaMenu}
         logoUrl={settings?.logoUrl}
         brandName={settings?.brandName}
+        phone={settings?.phone}
+        email={settings?.email}
       />
 
       <main className="relative overflow-hidden">
@@ -134,6 +137,7 @@ export default function CustomDesignClient({
                     src={tech.image_url || "/custom-design/thermal-debossing.jpg"}
                     alt={tech.title || "Custom design"}
                     fill
+                    unoptimized={isRemoteOrDataImage(tech.image_url || "")}
                     className="object-cover"
                     priority={index === 0}
                   />

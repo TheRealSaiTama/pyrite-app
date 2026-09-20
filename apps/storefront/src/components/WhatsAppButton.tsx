@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 const WhatsAppButton = () => {
   const [isHovered, setIsHovered] = useState(false);
-  const phoneNumber = '919899223130';
+  const phoneNumber = '918796684365';
   const message = 'Hello Pyrite, contacting through your website regarding an order. Please get back asap. Thank you.';
 
   const handleWhatsAppClick = () => {

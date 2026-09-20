@@ -21,7 +21,7 @@ import {
   resolveProductsByIds,
   DEFAULT_BEST_DEALS_NAMES,
   REQUIRED_HOME_SECTION_KEYS,
-} from "./mappers.ts";
+} from "./mappers";
 
 describe("mapSiteSettings", () => {
   it("uses fallbacks when row is null", () => {

@@ -18,7 +18,7 @@ import {
 import Header from "@/components/sections/header";
 import Footer from "@/components/sections/footer";
 import { useCart } from "@/context/ProductContext";
-import { resolveProductImage } from "@/lib/product-image";
+import { resolveProductImage, isRemoteOrDataImage } from "@/lib/product-image";
 
 interface CartClientProps {
   headerNav: any;
@@ -51,6 +51,8 @@ export default function CartClient({
         megaMenu={megaMenu}
         logoUrl={settings?.logoUrl}
         brandName={settings?.brandName}
+        phone={settings?.phone}
+        email={settings?.email}
       />
 
       <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
@@ -127,6 +129,7 @@ export default function CartClient({
                           src={imageUrl}
                           alt={item.name}
                           fill
+                          unoptimized={isRemoteOrDataImage(imageUrl)}
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </Link>

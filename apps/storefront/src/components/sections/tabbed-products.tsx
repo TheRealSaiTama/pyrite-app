@@ -98,9 +98,9 @@ export default function TabbedProducts({
 
   const byId = new Map<string, Product>();
   for (const p of products) {
-    if (!p.id) continue;
-    byId.set(p.id, p);
-    byId.set(p.id.toLowerCase(), p);
+    const idStr = String(p.id);
+    byId.set(idStr, p);
+    byId.set(idStr.toLowerCase(), p);
   }
 
   const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];

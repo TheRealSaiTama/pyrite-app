@@ -10,6 +10,7 @@ import {
   LOCAL_OWNER_ID,
   extractFileFromMultipart,
   type CmsRow,
+  type CmsDb,
 } from "@/lib/cms/local-store";
 
 export const runtime = "nodejs";
@@ -77,7 +78,7 @@ function session(email: string) {
 }
 
 function matchOp(cell: unknown, expr: string): boolean {
-  const m = expr.match(/^(eq|neq|gt|gte|lt|lte|like|ilike|in|is)\.(.*)$/s);
+  const m = expr.match(/^(eq|neq|gt|gte|lt|lte|like|ilike|in|is)\.([\s\S]*)$/);
   if (!m) return String(cell) === expr;
   const [, op, raw] = m;
   if (op === "eq") return String(cell ?? "") === raw;
@@ -348,11 +349,10 @@ async function handleStorage(req: NextRequest, parts: string[]) {
     for (const p of diskCandidates) {
       if (fs.existsSync(p)) {
         try {
-          let buf = fs.readFileSync(p);
-          const unwrapped = extractFileFromMultipart(buf);
-          buf = unwrapped.buf;
+          const raw = fs.readFileSync(p);
+          const unwrapped = extractFileFromMultipart(raw);
           const mime = unwrapped.mime || getMimeType(objectPath);
-          return new NextResponse(buf, {
+          return new NextResponse(new Uint8Array(unwrapped.buf), {
             status: 200,
             headers: {
               ...CORS,
@@ -377,18 +377,17 @@ async function handleStorage(req: NextRequest, parts: string[]) {
     );
 
     if (asset && asset.data_base64) {
-      let buf = Buffer.from(asset.data_base64, "base64");
-      const unwrapped = extractFileFromMultipart(buf);
-      buf = unwrapped.buf;
+      const raw = Buffer.from(asset.data_base64, "base64");
+      const unwrapped = extractFileFromMultipart(raw);
       const mime = unwrapped.mime || asset.mime_type || getMimeType(objectPath);
       // Cache to /tmp for fast future hits
       try {
         const tmpPath = path.join("/tmp", "pyrite-cms", "media", bucket, objectPath);
         fs.mkdirSync(path.dirname(tmpPath), { recursive: true });
-        fs.writeFileSync(tmpPath, buf);
+        fs.writeFileSync(tmpPath, unwrapped.buf);
       } catch {}
 
-      return new NextResponse(buf, {
+      return new NextResponse(new Uint8Array(unwrapped.buf), {
         status: 200,
         headers: {
           ...CORS,
@@ -533,8 +532,8 @@ export async function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 204, headers });
 }
 
-async function run(req: NextRequest, ctx: { params: Promise<{ path: string[] }> | { path: string[] } }) {
-  const resolved = "then" in ctx.params ? await ctx.params : ctx.params;
+async function run(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  const resolved = await ctx.params;
   const parts = resolved.path || [];
   try {
     return await dispatch(req, parts);
@@ -544,9 +543,21 @@ async function run(req: NextRequest, ctx: { params: Promise<{ path: string[] }> 
   }
 }
 
-export const GET = run;
-export const POST = run;
-export const PATCH = run;
-export const PUT = run;
-export const DELETE = run;
-export const HEAD = run;
+export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return run(req, ctx);
+}
+export async function POST(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return run(req, ctx);
+}
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return run(req, ctx);
+}
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return run(req, ctx);
+}
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return run(req, ctx);
+}
+export async function HEAD(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  return run(req, ctx);
+}

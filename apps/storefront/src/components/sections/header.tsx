@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/ProductContext";
+import { isRemoteOrDataImage } from "@/lib/product-image";
 
 type SearchResultItem = {
   id: string | number;
@@ -57,17 +58,24 @@ const Header = ({
   megaMenu,
   logoUrl,
   brandName,
+  phone,
+  email,
 }: {
   nav?: { label: string; href: string }[];
   megaMenu?: MegaItem[];
   logoUrl?: string | null;
   brandName?: string | null;
+  phone?: string | null;
+  email?: string | null;
 }) => {
   const categoriesToDisplay = megaMenu && megaMenu.length > 0 ? megaMenu : FALLBACK_CATEGORIES;
 
   const rawLogo = logoUrl?.trim() || "";
   const logo = rawLogo || "/logo.png";
   const brand = brandName?.trim() || "Pyrite";
+  const displayPhone = phone?.trim() || "+91 87966 84365";
+  const displayEmail = email?.trim() || "info@pyrite.in";
+  const telPhone = displayPhone.replace(/\s+/g, "");
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { cartCount, favourites } = useCart();
@@ -226,14 +234,14 @@ const Header = ({
             Direct Factory Pricing • Custom Logo Embossing • 100% Quality Guarantee
           </p>
           <div className="flex items-center gap-5 text-slate-300">
-            <a href="tel:+919899223130" className="hover:text-white flex items-center gap-1.5 transition-colors">
+            <a href={`tel:${telPhone}`} className="hover:text-white flex items-center gap-1.5 transition-colors">
               <Phone className="w-3.5 h-3.5 text-slate-400" />
-              <span>+91 9899223130</span>
+              <span>{displayPhone}</span>
             </a>
             <span className="opacity-30">|</span>
-            <a href="mailto:info@pyrite.in" className="hover:text-white flex items-center gap-1.5 transition-colors">
+            <a href={`mailto:${displayEmail}`} className="hover:text-white flex items-center gap-1.5 transition-colors">
               <Mail className="w-3.5 h-3.5 text-slate-400" />
-              <span>info@pyrite.in</span>
+              <span>{displayEmail}</span>
             </a>
             <span className="opacity-30">|</span>
             <Link href="/custom-design" className="hover:underline font-semibold text-white transition-colors">
@@ -254,6 +262,7 @@ const Header = ({
               width={160}
               height={48}
               priority
+              unoptimized={isRemoteOrDataImage(logo)}
               className="h-10 sm:h-12 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
           </Link>
@@ -315,6 +324,7 @@ const Header = ({
                               src={item.imageUrl || "/file.svg"}
                               alt={item.name}
                               fill
+                              unoptimized={isRemoteOrDataImage(item.imageUrl || "")}
                               sizes="44px"
                               className="object-cover"
                             />
@@ -443,6 +453,7 @@ const Header = ({
                             src={item.imageUrl || "/file.svg"}
                             alt={item.name}
                             fill
+                            unoptimized={isRemoteOrDataImage(item.imageUrl || "")}
                             className="object-cover"
                           />
                         </div>
@@ -581,14 +592,14 @@ const Header = ({
           </div>
           <div className="pt-2 border-t border-slate-100 flex items-center justify-around text-xs text-slate-600">
             <a
-              href="tel:+919899223130"
+              href={`tel:${telPhone}`}
               className="flex items-center gap-1.5 hover:text-[#0F172A] py-1"
             >
               <Phone className="w-3.5 h-3.5" />
               <span>Call Us</span>
             </a>
             <a
-              href="mailto:info@pyrite.in"
+              href={`mailto:${displayEmail}`}
               className="flex items-center gap-1.5 hover:text-[#0F172A] py-1"
             >
               <Mail className="w-3.5 h-3.5" />

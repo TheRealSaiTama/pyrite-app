@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/admin/admin-shell";
-import { saveProduct, deleteProduct, saveDiary, deleteDiary, registerMedia } from "@/lib/admin.functions";
+import { saveProduct, deleteProduct, saveDiary, deleteDiary, registerMedia, saveCatalogMetadata } from "@/lib/admin.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -153,13 +153,15 @@ function normCat(s: string) {
 
 function matchCategory(productCat: string | null, targetCat: string): boolean {
   if (!productCat) return false;
-  const targetNorm = targetCat.trim().toUpperCase();
-  const productCats = productCat.split(",").map((c) => c.trim().toUpperCase());
+  const targetNorm = targetCat.trim().toUpperCase().replace(/\s+/g, " ");
+  const productCats = productCat.split(",").map((c) => c.trim().toUpperCase().replace(/\s+/g, " "));
   return productCats.some((pc) => {
     if (pc === targetNorm) return true;
     if (pc + "S" === targetNorm || pc === targetNorm + "S") return true;
-    if (targetNorm === "CORPORATE GIFT SETS" && pc === "CORPORATE GIFT SET") return true;
-    if (targetNorm === "CUSTOMISED DIARY & NOTE BOOKS" && pc.includes("CUSTOMISED DIARY")) return true;
+    if (targetNorm === "CORPORATE GIFT SETS" && (pc === "CORPORATE GIFT SET" || pc === "CORPORATE GIFTSETS" || pc === "CORPORATE GIFT SETS")) return true;
+    if (targetNorm.includes("CUSTOMISED DIARY") && pc.includes("CUSTOMISED DIARY")) return true;
+    if (targetNorm.includes("NEW YEAR DIARY") && pc.includes("NEW YEAR DIARY")) return true;
+    if (targetNorm.includes("BOTTLE") && pc.includes("BOTTLE")) return true;
     return false;
   });
 }
@@ -247,6 +249,10 @@ function ProductsPage() {
   const [newSubName, setNewSubName] = useState("");
   const qc = useQueryClient();
 
+  const runSaveProduct = useServerFn(saveProduct);
+  const runSaveDiary = useServerFn(saveDiary);
+  const runSaveCatalogMetadata = useServerFn(saveCatalogMetadata);
+
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -276,26 +282,56 @@ function ProductsPage() {
           ogImageUrl: v.ogImageUrl ?? "",
         };
       }
-      try {
-        const raw = JSON.parse(localStorage.getItem(CUSTOM_CATEGORIES_KEY) || "[]");
-        if (Array.isArray(raw)) {
-          for (const item of raw) {
-            if (item && typeof item === "object" && typeof item.name === "string") {
-              const name = item.name as string;
-              if (!map[name] && (item.seoTitle || item.seoDescription)) {
-                map[name] = {
-                  seoTitle: item.seoTitle || "",
-                  seoDescription: item.seoDescription || "",
-                  ogImageUrl: "",
-                };
-              }
-            }
-          }
-        }
-      } catch { }
       return map;
     } catch { return {}; }
   });
+
+  const { data: catalogMeta } = useQuery({
+    queryKey: ["catalog-categories-metadata"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("page_sections")
+        .select("content")
+        .eq("page_key", "catalog")
+        .eq("section_key", "categories")
+        .maybeSingle();
+      if (error || !data?.content) return null;
+      return data.content as {
+        customCategories?: CustomCategory[];
+        customSubcategories?: Record<string, string[]>;
+        categorySeo?: Record<string, CategorySeo>;
+      };
+    },
+  });
+
+  useEffect(() => {
+    if (!catalogMeta) return;
+    if (Array.isArray(catalogMeta.customCategories) && catalogMeta.customCategories.length > 0) {
+      setCustomCategories((prev) => {
+        const names = new Set(prev.map((c) => c.name.toUpperCase()));
+        const merged = [...prev];
+        for (const c of catalogMeta.customCategories!) {
+          if (c && c.name && !names.has(c.name.toUpperCase())) {
+            names.add(c.name.toUpperCase());
+            merged.push(c);
+          }
+        }
+        return merged;
+      });
+    }
+    if (catalogMeta.customSubcategories) {
+      setCustomSubcategories((prev) => ({
+        ...catalogMeta.customSubcategories,
+        ...prev,
+      }));
+    }
+    if (catalogMeta.categorySeo) {
+      setCategorySeo((prev) => ({
+        ...catalogMeta.categorySeo,
+        ...prev,
+      }));
+    }
+  }, [catalogMeta]);
 
   useEffect(() => {
     localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(customCategories));
@@ -309,10 +345,24 @@ function ProductsPage() {
     localStorage.setItem(CATEGORY_SEO_KEY, JSON.stringify(categorySeo));
   }, [categorySeo]);
 
-  const allCategories = useMemo(
-    () => [...STOREFRONT_CATEGORIES, ...customCategories.map((c) => c.name)],
-    [customCategories],
-  );
+  async function persistCatalogMetadata(
+    cats: CustomCategory[],
+    subcats: Record<string, string[]>,
+    seo: Record<string, CategorySeo>,
+  ) {
+    try {
+      await runSaveCatalogMetadata({
+        data: {
+          customCategories: cats,
+          customSubcategories: subcats,
+          categorySeo: seo,
+        },
+      });
+      qc.invalidateQueries({ queryKey: ["catalog-categories-metadata"] });
+    } catch (e) {
+      console.error("Failed to persist catalog metadata to server", e);
+    }
+  }
 
   function openAddCategoryForm() {
     setCatForm({
@@ -335,7 +385,92 @@ function ProductsPage() {
     });
   }
 
-  function saveCategoryForm() {
+  function duplicateItem(item: CatalogItem) {
+    const baseSlug = (item.slug || item.name || "item")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    setEditing({
+      ...item,
+      id: "",
+      name: `${item.name} (Copy)`,
+      slug: `${baseSlug}-copy`,
+      category: item.category,
+      tags: [...(item.tags || [])],
+    });
+    toast.message("Duplicating — review and save to create the copy");
+  }
+
+  const { data: dbProducts = [], isLoading: loadingProducts } = useQuery<CatalogItem[]>({
+    queryKey: ["products-admin-only"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("products").select("*");
+      if (error) throw error;
+      return (data || []).map((p: any) => ({
+        ...p,
+        type: "product" as const,
+        gallery: Array.isArray(p.gallery) ? (p.gallery as string[]) : [],
+        features: (p.features && typeof p.features === "object" ? p.features : {}) as Record<string, ProductFeature>,
+        seo_title: p.seo_title ?? null,
+        seo_description: p.seo_description ?? null,
+        moq: p.moq ?? 50,
+      }));
+    },
+  });
+
+  const { data: dbDiaries = [], isLoading: loadingDiaries } = useQuery<CatalogItem[]>({
+    queryKey: ["diaries-admin-only"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("diaries").select("*");
+      if (error) throw error;
+      return (data || []).map((d: any) => ({
+        ...d,
+        type: "diary" as const,
+        gallery: Array.isArray(d.gallery) ? (d.gallery as string[]) : [],
+        features: (d.features && typeof d.features === "object" ? d.features : {}) as Record<string, ProductFeature>,
+        seo_title: d.seo_title ?? null,
+        seo_description: d.seo_description ?? null,
+        moq: d.moq ?? 50,
+      }));
+    },
+  });
+
+  const isLoading = loadingProducts || loadingDiaries;
+
+  const allItems = useMemo(() => {
+    return [...(dbProducts || []), ...(dbDiaries || [])].sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [dbProducts, dbDiaries]);
+
+  const dbCategories = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of allItems) {
+      if (!item.category) continue;
+      item.category.split(",").forEach((c: string) => {
+        const clean = c.trim().toUpperCase().replace(/\s+/g, " ");
+        if (clean) set.add(clean);
+      });
+    }
+    return Array.from(set);
+  }, [allItems]);
+
+  const allCategories = useMemo(() => {
+    const builtIn = [...STOREFRONT_CATEGORIES];
+    const custom = customCategories.map((c) => c.name.trim().toUpperCase().replace(/\s+/g, " "));
+    const fromDb = dbCategories;
+    const combined = new Set<string>();
+    for (const c of builtIn) combined.add(c);
+    for (const c of custom) combined.add(c);
+    for (const c of fromDb) {
+      if (!Array.from(combined).some((existing) => matchCategory(c, existing))) {
+        combined.add(c);
+      }
+    }
+    return Array.from(combined);
+  }, [customCategories, dbCategories]);
+
+  async function saveCategoryForm() {
     if (!catForm) return;
     const name = catForm.name.trim().toUpperCase().replace(/\s+/g, " ");
     if (!name) {
@@ -354,49 +489,276 @@ function ProductsPage() {
         toast.error("Category already exists");
         return;
       }
-      setCustomCategories((prev) => [
-        ...prev,
+      const nextCustom = [
+        ...customCategories,
         {
           name,
           seoTitle: seo.seoTitle || undefined,
           seoDescription: seo.seoDescription || undefined,
         },
-      ]);
-      setCategorySeo((prev) => ({ ...prev, [name]: seo }));
+      ];
+      const nextSeo = { ...categorySeo, [name]: seo };
+      setCustomCategories(nextCustom);
+      setCategorySeo(nextSeo);
       setCatForm(null);
+      await persistCatalogMetadata(nextCustom, customSubcategories, nextSeo);
       toast.success(`Added "${name}"`);
       return;
     }
 
-    const key = catForm.originalName || name;
-    setCategorySeo((prev) => ({ ...prev, [key]: seo }));
-    setCustomCategories((prev) =>
-      prev.map((c) =>
-        c.name === key
-          ? {
-              ...c,
-              seoTitle: seo.seoTitle || undefined,
-              seoDescription: seo.seoDescription || undefined,
-            }
-          : c,
-      ),
-    );
+    const oldName = (catForm.originalName || name).trim().toUpperCase().replace(/\s+/g, " ");
+    const isRenaming = oldName !== name;
+
+    if (isRenaming) {
+      if (allCategories.some((c) => c.toUpperCase() === name && c.toUpperCase() !== oldName)) {
+        toast.error("A category with that name already exists");
+        return;
+      }
+    }
+
+    const nextCustom = customCategories.some((c) => c.name.toUpperCase() === oldName)
+      ? customCategories.map((c) =>
+          c.name.toUpperCase() === oldName
+            ? {
+                name,
+                seoTitle: seo.seoTitle || undefined,
+                seoDescription: seo.seoDescription || undefined,
+              }
+            : c,
+        )
+      : [
+          ...customCategories,
+          {
+            name,
+            seoTitle: seo.seoTitle || undefined,
+            seoDescription: seo.seoDescription || undefined,
+          },
+        ];
+
+    const nextSeo = { ...categorySeo };
+    if (isRenaming) delete nextSeo[oldName];
+    nextSeo[name] = seo;
+
+    const nextSub = { ...customSubcategories };
+    if (isRenaming && nextSub[oldName]) {
+      nextSub[name] = nextSub[oldName];
+      delete nextSub[oldName];
+    }
+
+    setCustomCategories(nextCustom);
+    setCategorySeo(nextSeo);
+    setCustomSubcategories(nextSub);
     setCatForm(null);
-    toast.success(`Saved SEO for "${key}"`);
+
+    let updatedCount = 0;
+    if (isRenaming) {
+      for (const item of allItems) {
+        if (!item.category) continue;
+        const cats = item.category.split(",").map((c: string) => c.trim());
+        if (cats.some((c: string) => matchCategory(c, oldName))) {
+          const replaced = cats
+            .map((c: string) => (matchCategory(c, oldName) ? name : c))
+            .join(", ");
+          try {
+            if (item.type === "diary") {
+              await runSaveDiary({
+                data: {
+                  id: item.id,
+                  values: {
+                    slug: item.slug,
+                    name: item.name,
+                    description: item.description,
+                    min_price: item.min_price,
+                    max_price: item.max_price,
+                    category: replaced,
+                    tags: item.tags || [],
+                    color: item.color || null,
+                    size: item.size || null,
+                    pages: item.pages || null,
+                    cover_type: item.cover_type || null,
+                    image_url: item.image_url || null,
+                    featured: item.featured,
+                    enabled: item.enabled,
+                    gallery: item.gallery || [],
+                    features: item.features || {},
+                    seo_title: item.seo_title || null,
+                    seo_description: item.seo_description || null,
+                    moq: item.moq || 50,
+                  },
+                },
+              });
+            } else {
+              await runSaveProduct({
+                data: {
+                  id: item.id,
+                  values: {
+                    slug: item.slug,
+                    name: item.name,
+                    description: item.description,
+                    min_price: item.min_price,
+                    max_price: item.max_price,
+                    category: replaced,
+                    tags: item.tags || [],
+                    image_url: item.image_url || null,
+                    featured: item.featured,
+                    enabled: item.enabled,
+                    gallery: item.gallery || [],
+                    features: item.features || {},
+                    seo_title: item.seo_title || null,
+                    seo_description: item.seo_description || null,
+                    moq: item.moq || 50,
+                  },
+                },
+              });
+            }
+            updatedCount++;
+          } catch (e) {
+            console.error("Failed to update item category on rename", e);
+          }
+        }
+      }
+
+      if (selectedCategory === oldName) setSelectedCategory(name);
+      if (expandedCategory === oldName) setExpandedCategory(name);
+      qc.invalidateQueries({ queryKey: ["products-admin-only"] });
+      qc.invalidateQueries({ queryKey: ["diaries-admin-only"] });
+    }
+
+    await persistCatalogMetadata(nextCustom, nextSub, nextSeo);
+    if (isRenaming) {
+      toast.success(
+        `Renamed "${oldName}" to "${name}"${updatedCount > 0 ? ` and updated ${updatedCount} item(s)` : ""}`
+      );
+    } else {
+      toast.success(`Saved SEO for "${name}"`);
+    }
   }
 
-  function addSubcategory() {
+  async function deleteCategory(cat: string) {
+    if (!confirm(`Delete category "${cat}"? Items will remain but lose this category tag.`)) return;
+    const norm = cat.toUpperCase();
+    const nextCustom = customCategories.filter((c) => c.name.toUpperCase() !== norm);
+    const nextSeo = { ...categorySeo };
+    delete nextSeo[cat];
+    delete nextSeo[norm];
+    const nextSub = { ...customSubcategories };
+    delete nextSub[cat];
+    delete nextSub[norm];
+
+    setCustomCategories(nextCustom);
+    setCategorySeo(nextSeo);
+    setCustomSubcategories(nextSub);
+    if (selectedCategory === cat) setSelectedCategory(null);
+    if (expandedCategory === cat) setExpandedCategory(null);
+
+    // Update items in database to strip this category
+    let updatedCount = 0;
+    for (const item of allItems) {
+      if (!item.category) continue;
+      const cats = item.category.split(",").map((c: string) => c.trim()).filter(Boolean);
+      if (cats.some((c: string) => matchCategory(c, cat))) {
+        const remaining = cats.filter((c: string) => !matchCategory(c, cat));
+        const newCat = remaining.length > 0 ? remaining.join(", ") : null;
+        try {
+          if (item.type === "diary") {
+            await runSaveDiary({
+              data: {
+                id: item.id,
+                values: {
+                  slug: item.slug,
+                  name: item.name,
+                  description: item.description,
+                  min_price: item.min_price,
+                  max_price: item.max_price,
+                  category: newCat,
+                  tags: item.tags || [],
+                  color: item.color || null,
+                  size: item.size || null,
+                  pages: item.pages || null,
+                  cover_type: item.cover_type || null,
+                  image_url: item.image_url || null,
+                  featured: item.featured,
+                  enabled: item.enabled,
+                  gallery: item.gallery || [],
+                  features: item.features || {},
+                  seo_title: item.seo_title || null,
+                  seo_description: item.seo_description || null,
+                  moq: item.moq || 50,
+                },
+              },
+            });
+          } else {
+            await runSaveProduct({
+              data: {
+                id: item.id,
+                values: {
+                  slug: item.slug,
+                  name: item.name,
+                  description: item.description,
+                  min_price: item.min_price,
+                  max_price: item.max_price,
+                  category: newCat,
+                  tags: item.tags || [],
+                  image_url: item.image_url || null,
+                  featured: item.featured,
+                  enabled: item.enabled,
+                  gallery: item.gallery || [],
+                  features: item.features || {},
+                  seo_title: item.seo_title || null,
+                  seo_description: item.seo_description || null,
+                  moq: item.moq || 50,
+                },
+              },
+            });
+          }
+          updatedCount++;
+        } catch (e) {
+          console.error("Failed to strip category on delete", e);
+        }
+      }
+    }
+
+    qc.invalidateQueries({ queryKey: ["products-admin-only"] });
+    qc.invalidateQueries({ queryKey: ["diaries-admin-only"] });
+    await persistCatalogMetadata(nextCustom, nextSub, nextSeo);
+    toast.success(
+      `Deleted category "${cat}"${updatedCount > 0 ? ` and updated ${updatedCount} item(s)` : ""}`
+    );
+  }
+
+  async function addSubcategory() {
     if (!addSubFor) return;
     const name = newSubName.trim();
     if (!name) return;
     const cat = addSubFor.toUpperCase();
-    setCustomSubcategories((prev) => ({
-      ...prev,
-      [cat]: [...(prev[cat] || []), name],
-    }));
+    const existingSubs = getSubcategoriesFor(cat);
+    if (existingSubs.some((s) => s.toLowerCase() === name.toLowerCase())) {
+      toast.error("Subcategory already exists");
+      return;
+    }
+    const nextSub = {
+      ...customSubcategories,
+      [cat]: [...(customSubcategories[cat] || []), name],
+    };
+    setCustomSubcategories(nextSub);
     setNewSubName("");
     setAddSubOpen(false);
+    await persistCatalogMetadata(customCategories, nextSub, categorySeo);
     toast.success(`Added "${name}" to ${cat}`);
+  }
+
+  async function deleteSubcategory(cat: string, subcat: string) {
+    const norm = cat.toUpperCase();
+    const nextSub = {
+      ...customSubcategories,
+      [norm]: (customSubcategories[norm] || []).filter((s) => s !== subcat),
+    };
+    setCustomSubcategories(nextSub);
+    if (selectedCategory === cat && selectedSubcategory === subcat) {
+      setSelectedSubcategory(null);
+    }
+    await persistCatalogMetadata(customCategories, nextSub, categorySeo);
+    toast.success(`Removed "${subcat}" from ${cat}`);
   }
 
   function getSubcategoriesFor(cat: string): string[] {
@@ -406,48 +768,6 @@ function ProductsPage() {
       ...(customSubcategories[norm] || []),
     ]));
   }
-
-  function duplicateItem(item: CatalogItem) {
-    const baseSlug = (item.slug || item.name || "item")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-    setEditing({
-      ...item,
-      id: "",
-      name: `${item.name} (Copy)`,
-      slug: `${baseSlug}-copy`,
-      category: item.category,
-      tags: [...(item.tags || [])],
-    });
-    toast.message("Duplicating — review and save to create the copy");
-  }
-
-  const { data: dbProducts, isLoading: loadingProducts } = useQuery<CatalogItem[]>({
-    queryKey: ["products-admin-only"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("*");
-      if (error) throw error;
-      return (data || []).map((p) => ({ ...p, type: "product" as const }));
-    },
-  });
-
-  const { data: dbDiaries, isLoading: loadingDiaries } = useQuery<CatalogItem[]>({
-    queryKey: ["diaries-admin-only"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("diaries").select("*");
-      if (error) throw error;
-      return (data || []).map((d) => ({ ...d, type: "diary" as const }));
-    },
-  });
-
-  const isLoading = loadingProducts || loadingDiaries;
-
-  const allItems = useMemo(() => {
-    return [...(dbProducts || []), ...(dbDiaries || [])].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-  }, [dbProducts, dbDiaries]);
 
   const categoryCounts = useMemo(() => {
     const map: Record<string, number> = {};
@@ -502,7 +822,7 @@ function ProductsPage() {
         (p) =>
           p.name.toLowerCase().includes(search.toLowerCase()) ||
           p.category?.toLowerCase().includes(search.toLowerCase()) ||
-          (p.tags || []).some((t) => t.toLowerCase().includes(search.toLowerCase()))
+          (p.tags || []).some((t: string) => t.toLowerCase().includes(search.toLowerCase()))
       );
     }
     if (selectedCategory && selectedSubcategory) {
@@ -626,7 +946,7 @@ function ProductsPage() {
               allCategories.map((cat) => {
                 const isExpanded = expandedCategory === cat;
                 const subcats = getSubcategoriesFor(cat);
-                const isCustom = customCategories.some((c) => c.name === cat);
+                const isCustom = !STOREFRONT_CATEGORIES.some((sc) => sc.toUpperCase() === cat.toUpperCase());
                 return (
                   <div key={cat} className="transition-all">
                     <div className="w-full flex items-center gap-2 px-4 py-3 hover:bg-surface/60 transition-colors group">
@@ -666,6 +986,21 @@ function ProductsPage() {
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
+                      {isCustom && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteCategory(cat);
+                          }}
+                          title={`Delete custom category: ${cat}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       {isExpanded && (
                         <Button
                           type="button"
@@ -689,18 +1024,37 @@ function ProductsPage() {
                       <div className="bg-surface/30 pl-10 pr-4 py-1 divide-y divide-border/20 border-t border-b border-border/10">
                         {subcats.map((subcat) => {
                           const count = allItems.filter(item => matchCategory(item.category, cat) && getSubcategory(item, cat) === subcat).length;
+                          const isCustomSub = (customSubcategories[cat.toUpperCase()] || []).includes(subcat);
                           return (
-                            <button
+                            <div
                               key={subcat}
-                              onClick={() => {
-                                setSelectedCategory(cat);
-                                setSelectedSubcategory(subcat);
-                              }}
-                              className="w-full flex items-center justify-between py-2.5 text-xs hover:text-primary text-muted-foreground hover:bg-surface-2/10 transition-all text-left group/sub"
+                              className="w-full flex items-center justify-between py-2 text-xs hover:text-primary text-muted-foreground hover:bg-surface-2/10 transition-all group/sub"
                             >
-                              <span className="group-hover/sub:translate-x-1 transition-transform">{subcat}</span>
-                              <span className="text-[10px] bg-surface-2 px-1.5 py-0.5 rounded border border-border/85 text-muted-foreground font-mono">{count} items</span>
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedCategory(cat);
+                                  setSelectedSubcategory(subcat);
+                                }}
+                                className="flex-1 flex items-center justify-between text-left pr-2"
+                              >
+                                <span className="group-hover/sub:translate-x-1 transition-transform">{subcat}</span>
+                                <span className="text-[10px] bg-surface-2 px-1.5 py-0.5 rounded border border-border/85 text-muted-foreground font-mono">{count} items</span>
+                              </button>
+                              {isCustomSub && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteSubcategory(cat, subcat);
+                                  }}
+                                  className="text-muted-foreground hover:text-destructive p-1 rounded opacity-0 group-hover/sub:opacity-100 transition-opacity"
+                                  title={`Delete subcategory "${subcat}"`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
                           );
                         })}
                         {subcats.length === 0 && (
@@ -922,6 +1276,7 @@ function ProductsPage() {
             <ProductForm
               product={editing}
               allCategories={allCategories}
+              customSubcategories={customSubcategories}
               defaultCategory={selectedCategory && selectedCategory !== "__uncategorised__" ? selectedCategory : undefined}
               defaultSubcategory={search || !selectedSubcategory || selectedCategory === "__uncategorised__" ? undefined : selectedSubcategory}
               onClose={() => setEditing(null)}
@@ -953,12 +1308,11 @@ function ProductsPage() {
                   onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
                   placeholder="e.g. WOODEN GIFTS"
                   className="mt-1.5"
-                  disabled={catForm.mode === "edit"}
                 />
                 <p className="text-xs text-muted-foreground mt-1.5">
                   {catForm.mode === "add"
                     ? "Saved in uppercase to match existing category style."
-                    : "Category name is fixed. Update SEO fields below."}
+                    : "Renaming this category will also update all existing products and diaries assigned to it."}
                 </p>
               </div>
 
@@ -1018,7 +1372,7 @@ function ProductsPage() {
             </DialogClose>
             <Button
               onClick={saveCategoryForm}
-              disabled={catForm?.mode === "add" && !catForm.name.trim()}
+              disabled={!catForm?.name.trim()}
             >
               {catForm?.mode === "edit" ? "Save category" : (
                 <>
@@ -1073,6 +1427,7 @@ function ProductForm({
   onClose,
   onSaved,
   allCategories,
+  customSubcategories,
   defaultCategory,
   defaultSubcategory,
 }: {
@@ -1080,6 +1435,7 @@ function ProductForm({
   onClose: () => void;
   onSaved: () => void;
   allCategories: string[];
+  customSubcategories?: Record<string, string[]>;
   defaultCategory?: string;
   defaultSubcategory?: string;
 }) {
@@ -1114,7 +1470,7 @@ function ProductForm({
   const [saving, setSaving] = useState(false);
   const [catSearch, setCatSearch] = useState("");
 
-  const slugTouched = useRef(false);
+  const slugTouched = useRef(Boolean(product.id));
   useEffect(() => {
     if (slugTouched.current) return;
     const auto = slugify(values.name);
@@ -1133,7 +1489,22 @@ function ProductForm({
   async function handleSave() {
     setSaving(true);
     try {
-      const price = values.min_price;
+      const safeName = (values.name || "").trim();
+      if (!safeName) {
+        toast.error("Name is required");
+        setSaving(false);
+        return;
+      }
+
+      const price = values.min_price != null && values.min_price !== ("" as any) && !Number.isNaN(Number(values.min_price))
+        ? Number(values.min_price)
+        : null;
+      const maxPrice = values.max_price != null && values.max_price !== ("" as any) && !Number.isNaN(Number(values.max_price))
+        ? Number(values.max_price)
+        : price;
+      const safePages = values.pages != null && values.pages !== ("" as any) && !Number.isNaN(Number(values.pages))
+        ? Math.round(Number(values.pages))
+        : null;
       const moqNum = Math.max(1, Number(values.moq) || 50);
       const moqFeature = { show: true, value: String(moqNum) };
       const currentFeatures = typeof values.features === "string"
@@ -1144,26 +1515,30 @@ function ProductForm({
         moq: moqFeature,
       };
 
+      const safeSlug = slugify(values.slug || safeName) || `item-${Date.now()}`;
+      const safeGallery = (values.gallery || []).filter(Boolean);
+      const safeTags = values.tags || [];
+
       if (values.type === "diary") {
         await runSaveDiary({
           data: {
             id: product.id || undefined,
             values: {
-              slug: values.slug || slugify(values.name),
-              name: values.name,
+              slug: safeSlug,
+              name: safeName,
               description: values.description || null,
               min_price: price,
-              max_price: price,
+              max_price: maxPrice,
               category: values.category || null,
-              tags: values.tags,
+              tags: safeTags,
               color: values.color || null,
               size: values.size || null,
-              pages: values.pages,
+              pages: safePages,
               cover_type: values.cover_type || null,
               image_url: values.image_url || null,
               featured: values.featured,
               enabled: values.enabled,
-              gallery: values.gallery || [],
+              gallery: safeGallery,
               features: updatedFeatures,
               seo_title: values.seo_title || null,
               seo_description: values.seo_description || null,
@@ -1176,17 +1551,17 @@ function ProductForm({
           data: {
             id: product.id || undefined,
             values: {
-              slug: values.slug || slugify(values.name),
-              name: values.name,
+              slug: safeSlug,
+              name: safeName,
               description: values.description || null,
               min_price: price,
-              max_price: price,
+              max_price: maxPrice,
               category: values.category || null,
-              tags: values.tags,
+              tags: safeTags,
               image_url: values.image_url || null,
               featured: values.featured,
               enabled: values.enabled,
-              gallery: values.gallery || [],
+              gallery: safeGallery,
               features: updatedFeatures,
               seo_title: values.seo_title || null,
               seo_description: values.seo_description || null,
@@ -1237,7 +1612,10 @@ function ProductForm({
     : allCategories;
 
   const availableSubcats = Array.from(new Set(
-    selectedCats.flatMap(cat => STOREFRONT_SUBCATEGORIES[cat.toUpperCase()] || [])
+    selectedCats.flatMap(cat => [
+      ...(STOREFRONT_SUBCATEGORIES[cat.toUpperCase()] || []),
+      ...(customSubcategories?.[cat.toUpperCase()] || []),
+    ])
   ));
 
   const selectedSubcats = (values.tags || []).filter(t => availableSubcats.includes(t));
@@ -1387,6 +1765,7 @@ function ProductForm({
           <Label>Price (₹)</Label>
           <Input
             type="number"
+            step="any"
             value={values.min_price ?? ""}
             onChange={(e) => {
               const val = e.target.value === "" ? null : Number(e.target.value);

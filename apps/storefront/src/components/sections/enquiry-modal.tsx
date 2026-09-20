@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import Image from "next/image";
 import type { Product } from "@/types/Product";
+import { resolveProductImage, isRemoteOrDataImage } from "@/lib/product-image";
 
 const formSchema = z.object({
   fullName: z.string().min(1, "Full name is required"),
@@ -60,7 +61,7 @@ export function EnquiryFormContent({ open, onOpenChange, selectedProducts = [], 
   const [files, setFiles] = React.useState<File[]>([]);
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       description: "",
       fullName: "",
@@ -139,15 +140,25 @@ export function EnquiryFormContent({ open, onOpenChange, selectedProducts = [], 
         <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
           <h4 className="font-bold text-[#0F172A] mb-3">Selected Products ({selectedProducts.length})</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {selectedProducts.map((product) => (
-              <div key={product.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-xs">
-                <Image src={product.image} alt={product.name} width={60} height={60} className="object-cover rounded-md" />
-                <div>
-                  <p className="font-semibold text-sm text-slate-900">{product.name}</p>
-                  <p className="text-[#0F172A] font-bold text-xs">{product.currency} {product.price}</p>
+            {selectedProducts.map((product) => {
+              const imgSrc = resolveProductImage(product.image);
+              return (
+                <div key={product.id} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-slate-100 shadow-xs">
+                  <Image
+                    src={imgSrc}
+                    alt={product.name}
+                    width={60}
+                    height={60}
+                    unoptimized={isRemoteOrDataImage(imgSrc)}
+                    className="object-cover rounded-md"
+                  />
+                  <div>
+                    <p className="font-semibold text-sm text-slate-900">{product.name}</p>
+                    <p className="text-[#0F172A] font-bold text-xs">{product.currency} {product.price}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

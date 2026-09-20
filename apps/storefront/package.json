@@ -7,7 +7,7 @@
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
-        "test": "npx tsx --test src/lib/cms/mappers.test.ts src/lib/cms/storage.test.ts",
+        "test": "npx tsx --test src/lib/cms/mappers.test.ts src/lib/cms/storage.test.ts src/lib/cms/workflow.test.ts src/lib/cms/integration.test.ts",
         "db:seed": "npx tsx prisma/seed.ts",
         "postinstall": "prisma generate"
     },

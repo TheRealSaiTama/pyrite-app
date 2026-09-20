@@ -161,7 +161,12 @@ export function cmsDiaries(): CatalogItem[] {
 }
 
 export function cmsItemByIdOrSlug(id: string): CatalogItem | null {
-  const needle = id.toLowerCase();
+  if (!id) return null;
+  let cleanId = String(id);
+  try {
+    cleanId = decodeURIComponent(cleanId);
+  } catch {}
+  const needle = cleanId.toLowerCase().trim();
   return (
     cmsCatalog().find(
       (r) => r.id.toLowerCase() === needle || r.slug.toLowerCase() === needle,

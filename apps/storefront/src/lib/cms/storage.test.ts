@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { dataDir, readCms, mutateCms } from "./local-store.ts";
-import { resolveProductImage } from "../product-image.ts";
+import { dataDir, readCms, mutateCms } from "./local-store";
+import { resolveProductImage } from "../product-image";
 
 describe("storage & media upload persistence", () => {
   it("resolves dataDir to a writable directory", () => {
@@ -46,7 +46,7 @@ describe("storage & media upload persistence", () => {
   });
 
   it("extractFileFromMultipart unwraps multipart payload cleanly", async () => {
-    const { extractFileFromMultipart } = await import("./local-store.ts");
+    const { extractFileFromMultipart } = await import("./local-store");
     const fakeMultipart = Buffer.from(
       '------WebKitFormBoundaryXYZ\r\n' +
       'Content-Disposition: form-data; name="cacheControl"\r\n\r\n' +

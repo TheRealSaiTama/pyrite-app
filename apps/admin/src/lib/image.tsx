@@ -1,7 +1,18 @@
 import React, { useState, useMemo } from "react";
 import { ImageIcon } from "lucide-react";
 
-const STOREFRONT_ORIGIN = "https://pyrite-app-storefront.vercel.app";
+import { getSupabaseUrl } from "@/integrations/supabase/env";
+
+export function getStorefrontOrigin(): string {
+  try {
+    const sb = getSupabaseUrl();
+    if (sb.startsWith("http")) {
+      const u = new URL(sb);
+      return u.origin;
+    }
+  } catch {}
+  return "https://pyrite-app-storefront.vercel.app";
+}
 
 export function extractGoogleDriveFileId(url: string): string | null {
   const s = String(url || "").trim();
@@ -20,7 +31,7 @@ export function extractGoogleDriveFileId(url: string): string | null {
 }
 
 export function resolveAdminImage(raw: string | null | undefined): string {
-  const url = String(raw || "").trim();
+  let url = String(raw || "").trim();
   if (!url) return "";
 
   // 1. Google Drive URLs -> direct image URL from Googleusercontent
@@ -29,12 +40,17 @@ export function resolveAdminImage(raw: string | null | undefined): string {
     return `https://lh3.googleusercontent.com/d/${driveId}=w400`;
   }
 
-  // 2. Relative URLs -> prefix with Storefront origin so admin domain can fetch them
-  if (url.startsWith("/")) {
-    return `${STOREFRONT_ORIGIN}${url}`;
+  // 2. Relative paths without leading slash
+  if (url.startsWith("cms-media/") || url.startsWith("api/cms/")) {
+    url = `/${url}`;
   }
 
-  // 3. Absolute HTTP / HTTPS / data: URLs
+  // 3. Relative URLs -> prefix with Storefront origin so admin domain can fetch them
+  if (url.startsWith("/")) {
+    return `${getStorefrontOrigin()}${url}`;
+  }
+
+  // 4. Absolute HTTP / HTTPS / data: URLs
   return url;
 }
 

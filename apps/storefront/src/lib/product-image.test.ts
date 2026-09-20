@@ -4,7 +4,7 @@ import {
   extractGoogleDriveFileId,
   resolveProductImage,
   PRODUCT_IMAGE_PLACEHOLDER,
-} from "./product-image.ts";
+} from "./product-image";
 
 describe("extractGoogleDriveFileId", () => {
   it("parses uc?id= links", () => {

@@ -45,7 +45,17 @@ function MediaLibrary() {
   return (
     <div>
       <PageHeader title="Media library" description="Every image used across the storefront. Hover to copy or delete.">
-        <input ref={fileRef} type="file" multiple accept="image/*" hidden onChange={(e) => e.target.files && handleFiles(e.target.files)} />
+        <input
+          ref={fileRef}
+          type="file"
+          multiple
+          accept="image/*"
+          hidden
+          onChange={(e) => {
+            if (e.target.files) handleFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
         <Button onClick={() => fileRef.current?.click()} disabled={uploading}>
           {uploading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Upload className="h-4 w-4 mr-1.5" />}
           Upload images

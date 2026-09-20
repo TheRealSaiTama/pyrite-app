@@ -88,6 +88,7 @@ export default function ProductGallery({ imageUrl, productName, gallery }: Produ
               src={img}
               alt={`${productName} thumbnail ${idx + 1}`}
               fill
+              unoptimized={isRemoteOrDataImage(img)}
               className="object-cover"
               sizes="80px"
             />

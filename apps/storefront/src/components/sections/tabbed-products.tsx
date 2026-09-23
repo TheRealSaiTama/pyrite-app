@@ -19,6 +19,12 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, className }) => {
+  const [imgSrc, setImgSrc] = React.useState(product.image || PRODUCT_IMAGE_PLACEHOLDER);
+
+  React.useEffect(() => {
+    setImgSrc(product.image || PRODUCT_IMAGE_PLACEHOLDER);
+  }, [product.image]);
+
   const baseValue = typeof product.minPrice === 'number' ? product.minPrice : product.price;
   const priceLabel = typeof baseValue === 'number' && !Number.isNaN(baseValue)
     ? `₹${baseValue.toLocaleString()}`
@@ -29,12 +35,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, className }) => {
       <Link href={`/shop/${product.id}`} className="block flex-1 flex flex-col">
         <div className="relative bg-slate-50 rounded-xl flex items-center justify-center p-5 mb-4 h-[220px] overflow-hidden product-image-container block">
           <Image
-            src={product.image || PRODUCT_IMAGE_PLACEHOLDER}
+            src={imgSrc}
             alt={product.name}
             fill
-            unoptimized={isRemoteOrDataImage(product.image || "")}
+            unoptimized={imgSrc.startsWith("data:")}
             className="object-contain p-4 transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 22vw"
+            onError={() => {
+              if (imgSrc !== PRODUCT_IMAGE_PLACEHOLDER) {
+                setImgSrc(PRODUCT_IMAGE_PLACEHOLDER);
+              }
+            }}
           />
           <span className="absolute top-3 right-3 bg-white rounded-full w-8 h-8 flex items-center justify-center cursor-pointer shadow-xs z-10 transition-transform group-hover:scale-110">
             <Image

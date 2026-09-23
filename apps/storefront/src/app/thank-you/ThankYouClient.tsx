@@ -31,10 +31,14 @@ export default function ThankYouClient({
   footerLinks,
 }: ThankYouClientProps) {
   const { clearCart } = useCart();
+  const hasClearedRef = React.useRef(false);
 
   useEffect(() => {
     // Ensure cart is cleared after reaching thank-you page
-    clearCart();
+    if (!hasClearedRef.current) {
+      hasClearedRef.current = true;
+      clearCart();
+    }
   }, [clearCart]);
 
   const customerCarePhone = settings?.phone || settings?.whatsappNumber || "+91 87966 84365";

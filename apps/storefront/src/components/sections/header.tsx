@@ -219,7 +219,7 @@ const Header = ({
   // Standard nav links matching the user's specification
   const navItems = [
     { label: "Shop", href: "/shop" },
-    { label: "Bulk Orders", href: "/custom-design" },
+    { label: "Bulk Orders", href: "/bulk-orders" },
     { label: "Custom Print", href: "/custom-design" },
     { label: "Contact Us", href: "#about" },
   ];
@@ -244,7 +244,7 @@ const Header = ({
               <span>{displayEmail}</span>
             </a>
             <span className="opacity-30">|</span>
-            <Link href="/custom-design" className="hover:underline font-semibold text-white transition-colors">
+            <Link href="/bulk-orders" className="hover:underline font-semibold text-white transition-colors">
               Bulk Orders
             </Link>
           </div>

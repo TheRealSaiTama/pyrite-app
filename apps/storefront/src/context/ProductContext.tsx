@@ -1,6 +1,6 @@
 "use client";
 import * as React from 'react';
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import type { Product } from '@/types/Product';
 
 export interface CartItem {
@@ -110,7 +110,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     }
   }, [favourites, hydrated]);
 
-  const addToCart = (
+  const addToCart = useCallback((
     item: {
       id: string | number;
       name: string;
@@ -141,7 +141,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         {
           id: item.id,
           name: item.name,
-          image: item.image || "",
+          image: item.image || "/file.svg",
           price: Number(item.price) || 0,
           quantity: qty,
           moq,
@@ -150,9 +150,9 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         },
       ];
     });
-  };
+  }, []);
 
-  const updateQuantity = (id: string | number, quantity: number) => {
+  const updateQuantity = useCallback((id: string | number, quantity: number) => {
     setCart((prev) =>
       prev.map((item) => {
         if (String(item.id) !== String(id)) return item;
@@ -160,76 +160,97 @@ export function ProductProvider({ children }: { children: ReactNode }) {
         return { ...item, quantity: validQty };
       }),
     );
-  };
+  }, []);
 
-  const removeFromCart = (id: string | number) => {
+  const removeFromCart = useCallback((id: string | number) => {
     setCart((prev) => prev.filter((item) => String(item.id) !== String(id)));
-  };
+  }, []);
 
-  const clearCart = () => {
-    setCart([]);
-  };
+  const clearCart = useCallback(() => {
+    setCart((prev) => (prev.length === 0 ? prev : []));
+  }, []);
 
-  const toggleFavourite = (id: string | number) => {
+  const toggleFavourite = useCallback((id: string | number) => {
     setFavourites((prev) =>
       prev.some((f) => String(f) === String(id))
         ? prev.filter((f) => String(f) !== String(id))
         : [...prev, id],
     );
-  };
+  }, []);
 
-  const isFavourite = (id: string | number) => {
+  const isFavourite = useCallback((id: string | number) => {
     return favourites.some((f) => String(f) === String(id));
-  };
+  }, [favourites]);
 
   // Calculations
-  const cartCount = cart.reduce((sum, item) => sum + 1, 0); // number of distinct product lines
+  const cartCount = cart.length; // number of distinct product lines
   const cartSubtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cartGst = Math.round(cartSubtotal * 0.18 * 100) / 100;
   const cartTotal = cartSubtotal + cartGst;
 
   // Legacy functions
-  const selectProduct = (productLike: Partial<Product> | any) => {
+  const selectProduct = useCallback((productLike: Partial<Product> | any) => {
     const product = normalizeProduct(productLike);
     setSelectedProducts((prev) =>
       prev.some((p) => String(p.id) === String(product.id)) ? prev : [...prev, product],
     );
-  };
+  }, []);
 
-  const deselectProduct = (id: string | number) => {
+  const deselectProduct = useCallback((id: string | number) => {
     setSelectedProducts((prev) => prev.filter((p) => String(p.id) !== String(id)));
-  };
+  }, []);
 
-  const clearSelected = () => {
-    setSelectedProducts([]);
-  };
+  const clearSelected = useCallback(() => {
+    setSelectedProducts((prev) => (prev.length === 0 ? prev : []));
+  }, []);
 
-  const isSelected = (id: string | number) => {
+  const isSelected = useCallback((id: string | number) => {
     return selectedProducts.some((p) => String(p.id) === String(id));
-  };
+  }, [selectedProducts]);
+
+  const value = useMemo(
+    () => ({
+      cart,
+      addToCart,
+      updateQuantity,
+      removeFromCart,
+      clearCart,
+      cartCount,
+      cartSubtotal,
+      cartGst,
+      cartTotal,
+      favourites,
+      toggleFavourite,
+      isFavourite,
+      selectedProducts,
+      selectProduct,
+      deselectProduct,
+      clearSelected,
+      isSelected,
+    }),
+    [
+      cart,
+      addToCart,
+      updateQuantity,
+      removeFromCart,
+      clearCart,
+      cartCount,
+      cartSubtotal,
+      cartGst,
+      cartTotal,
+      favourites,
+      toggleFavourite,
+      isFavourite,
+      selectedProducts,
+      selectProduct,
+      deselectProduct,
+      clearSelected,
+      isSelected,
+    ],
+  );
 
   return (
-    <ProductContext.Provider
-      value={{
-        cart,
-        addToCart,
-        updateQuantity,
-        removeFromCart,
-        clearCart,
-        cartCount,
-        cartSubtotal,
-        cartGst,
-        cartTotal,
-        favourites,
-        toggleFavourite,
-        isFavourite,
-        selectedProducts,
-        selectProduct,
-        deselectProduct,
-        clearSelected,
-        isSelected,
-      }}
-    >
+    <ProductContext.Provider value={value}>
       {children}
     </ProductContext.Provider>
   );

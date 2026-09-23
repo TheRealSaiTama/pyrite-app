@@ -2,8 +2,8 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
-import { resolveProductImage, isRemoteOrDataImage } from '@/lib/product-image';
+import { useState, useEffect } from 'react';
+import { resolveProductImage, PRODUCT_IMAGE_PLACEHOLDER } from '@/lib/product-image';
 
 interface Product {
   id: string | number;
@@ -18,11 +18,77 @@ interface RelatedProductsProps {
   heading?: string;
 }
 
-function getFileIdFromUrl(url: string): string | null {
-  if (!url) return null;
-  const regex = /(?:\/d\/|\?id=|&id=)([a-zA-Z0-9_-]{28,})/;
-  const match = url.match(regex);
-  return match ? match[1] : null;
+function RelatedProductCard({ product }: { product: Product }) {
+  const initialUrl = resolveProductImage(product.imageUrl);
+  const [imgSrc, setImgSrc] = useState(initialUrl);
+
+  useEffect(() => {
+    setImgSrc(resolveProductImage(product.imageUrl));
+  }, [product.imageUrl]);
+
+  const hasRange =
+    typeof product.minPrice === 'number' &&
+    typeof product.maxPrice === 'number' &&
+    product.minPrice !== product.maxPrice;
+  const hasSingle =
+    typeof product.minPrice === 'number' && product.minPrice !== null;
+
+  return (
+    <Link
+      href={`/shop/${product.id}`}
+      className="group bg-white rounded-xl shadow-md hover:shadow-xl overflow-hidden transition-all duration-300 border border-gray-100 hover:border-primary/30"
+    >
+      <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-white overflow-hidden">
+        <Image
+          src={imgSrc}
+          alt={product.name}
+          fill
+          unoptimized={imgSrc.startsWith("data:")}
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
+          sizes="(max-width: 768px) 50vw, 20vw"
+          onError={() => {
+            if (imgSrc !== PRODUCT_IMAGE_PLACEHOLDER) {
+              setImgSrc(PRODUCT_IMAGE_PLACEHOLDER);
+            }
+          }}
+        />
+      </div>
+      <div className="p-4">
+        <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 mb-3 group-hover:text-primary transition-colors">
+          {product.name}
+        </h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            {[...Array(4)].map((_, i) => (
+              <svg
+                key={i}
+                className="w-3 h-3 text-yellow-400 fill-current"
+                viewBox="0 0 20 20"
+              >
+                <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+              </svg>
+            ))}
+          </div>
+        </div>
+        <div className="mt-3">
+          {hasRange ? (
+            <p className="text-base font-bold text-red-600">
+              ₹{product.minPrice} - ₹{product.maxPrice}
+            </p>
+          ) : hasSingle ? (
+            <p className="text-base font-bold text-red-600">
+              ₹{product.minPrice}
+            </p>
+          ) : (
+            <p className="text-sm font-semibold text-gray-700">On Request</p>
+          )}
+        </div>
+        <button className="w-full mt-3 bg-white border border-[#0F172A] text-[#0F172A] hover:bg-[#0F172A] hover:text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm">
+          View Details
+        </button>
+      </div>
+    </Link>
+  );
 }
 
 export default function RelatedProducts({ products, heading }: RelatedProductsProps) {
@@ -75,69 +141,9 @@ export default function RelatedProducts({ products, heading }: RelatedProductsPr
         )}
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-          {visibleProducts.map((product) => {
-            const imageUrl = resolveProductImage(product.imageUrl);
-
-            const hasRange =
-              typeof product.minPrice === 'number' &&
-              typeof product.maxPrice === 'number' &&
-              product.minPrice !== product.maxPrice;
-            const hasSingle =
-              typeof product.minPrice === 'number' && product.minPrice !== null;
-
-            return (
-              <Link
-                key={product.id}
-                href={`/shop/${product.id}`}
-                className="group bg-white rounded-xl shadow-md hover:shadow-xl overflow-hidden transition-all duration-300 border border-gray-100 hover:border-primary/30"
-              >
-                <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-white overflow-hidden">
-                  <Image
-                    src={imageUrl}
-                    alt={product.name}
-                    fill
-                    unoptimized={isRemoteOrDataImage(imageUrl)}
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 768px) 50vw, 20vw"
-                  />
-                </div>
-                <div className="p-4">
-                  <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 mb-3 group-hover:text-primary transition-colors">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      {[...Array(4)].map((_, i) => (
-                        <svg
-                          key={i}
-                          className="w-3 h-3 text-yellow-400 fill-current"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
-                        </svg>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    {hasRange ? (
-                      <p className="text-base font-bold text-red-600">
-                        ₹{product.minPrice} - ₹{product.maxPrice}
-                      </p>
-                    ) : hasSingle ? (
-                      <p className="text-base font-bold text-red-600">
-                        ₹{product.minPrice}
-                      </p>
-                    ) : (
-                      <p className="text-sm font-semibold text-gray-700">On Request</p>
-                    )}
-                  </div>
-                  <button className="w-full mt-3 bg-white border border-[#0F172A] text-[#0F172A] hover:bg-[#0F172A] hover:text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm">
-                    View Details
-                  </button>
-                </div>
-              </Link>
-            );
-          })}
+          {visibleProducts.map((product) => (
+            <RelatedProductCard key={product.id} product={product} />
+          ))}
         </div>
 
         {startIndex + itemsPerView < products.length && (

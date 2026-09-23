@@ -33,7 +33,7 @@ export function resolveProductImage(raw: string | null | undefined): string {
 
   const driveId = extractGoogleDriveFileId(url);
   if (driveId) {
-    return `https://drive.google.com/thumbnail?id=${driveId}&sz=w1000`;
+    return `https://lh3.googleusercontent.com/d/${driveId}=w1000`;
   }
 
   if (

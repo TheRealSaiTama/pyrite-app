@@ -28,7 +28,7 @@ export async function getHeaderNav(): Promise<StorefrontNavLink[]> {
   if (mapped.length) return mapped;
   return [
     { label: "Shop", href: "/shop" },
-    { label: "Bulk Orders", href: "#our-products" },
+    { label: "Bulk Orders", href: "/bulk-orders" },
     { label: "Custom Print", href: "/custom-design" },
     { label: "About Us", href: "#about" },
   ];

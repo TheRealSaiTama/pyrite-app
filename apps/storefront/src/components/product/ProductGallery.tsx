@@ -1,10 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   resolveProductImage,
-  isRemoteOrDataImage,
   PRODUCT_IMAGE_PLACEHOLDER,
 } from '@/lib/product-image';
 
@@ -26,6 +25,13 @@ export default function ProductGallery({ imageUrl, productName, gallery }: Produ
   ].filter(Boolean);
   const safeImages = images.length > 0 ? images : [PRODUCT_IMAGE_PLACEHOLDER];
 
+  const targetSrc = safeImages[selectedImage] || safeImages[0] || PRODUCT_IMAGE_PLACEHOLDER;
+  const [currentSrc, setCurrentSrc] = useState(targetSrc);
+
+  useEffect(() => {
+    setCurrentSrc(targetSrc);
+  }, [targetSrc]);
+
   return (
     <div className="space-y-4">
       <div className="relative aspect-square bg-white rounded-xl overflow-hidden border border-gray-200 group">
@@ -38,15 +44,20 @@ export default function ProductGallery({ imageUrl, productName, gallery }: Produ
         </div>
         <div className="relative w-full h-full flex items-center justify-center p-8">
           <Image
-            src={safeImages[selectedImage] || safeImages[0]}
+            src={currentSrc}
             alt={productName}
             fill
-            unoptimized={isRemoteOrDataImage(safeImages[selectedImage] || safeImages[0])}
+            unoptimized={currentSrc.startsWith("data:")}
             className={`object-contain transition-transform duration-300 ${
               isZoomed ? 'scale-150' : 'scale-100'
             }`}
             sizes="(max-width: 768px) 100vw, 50vw"
             priority
+            onError={() => {
+              if (currentSrc !== PRODUCT_IMAGE_PLACEHOLDER) {
+                setCurrentSrc(PRODUCT_IMAGE_PLACEHOLDER);
+              }
+            }}
           />
         </div>
         <button
@@ -88,7 +99,7 @@ export default function ProductGallery({ imageUrl, productName, gallery }: Produ
               src={img}
               alt={`${productName} thumbnail ${idx + 1}`}
               fill
-              unoptimized={isRemoteOrDataImage(img)}
+              unoptimized={img.startsWith("data:")}
               className="object-cover"
               sizes="80px"
             />

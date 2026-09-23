@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Product } from '@/types/Product';
@@ -59,6 +60,12 @@ const heartIconUrl = "https://cdn.prod.website-files.com/63e857eaeaf853471d5335f
 const starIconUrl = "https://cdn.prod.website-files.com/63e857eaeaf853471d5335ff/63e9d9ee08987e0ffb064bca_Star.svg";
 
 const ProductCard = ({ product }: { product: Product }) => {
+  const [imgSrc, setImgSrc] = useState(product.image || PRODUCT_IMAGE_PLACEHOLDER);
+
+  useEffect(() => {
+    setImgSrc(product.image || PRODUCT_IMAGE_PLACEHOLDER);
+  }, [product.image]);
+
   const baseValue = typeof product.minPrice === 'number' ? product.minPrice : product.price;
   const priceString = typeof baseValue === 'number' && !Number.isNaN(baseValue)
     ? `₹${baseValue.toLocaleString()}`
@@ -70,12 +77,17 @@ const ProductCard = ({ product }: { product: Product }) => {
         {/* Product Image Container */}
         <div className="relative bg-slate-50/70 aspect-[4/3] overflow-hidden p-6 block">
           <Image
-            src={product.image || PRODUCT_IMAGE_PLACEHOLDER}
+            src={imgSrc}
             alt={product.name}
             fill
-            unoptimized={isRemoteOrDataImage(product.image || "")}
+            unoptimized={imgSrc.startsWith("data:")}
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
             className="object-contain p-4 transition-transform duration-500 group-hover:scale-108"
+            onError={() => {
+              if (imgSrc !== PRODUCT_IMAGE_PLACEHOLDER) {
+                setImgSrc(PRODUCT_IMAGE_PLACEHOLDER);
+              }
+            }}
           />
           <span className="absolute top-3.5 right-3.5 bg-white/90 backdrop-blur-md rounded-full p-2 shadow-xs border border-slate-100 transition-all duration-300 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0">
             <Image src={heartIconUrl} alt="Wishlist" width={15} height={15} unoptimized />

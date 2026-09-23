@@ -13,16 +13,10 @@ interface SearchResult {
   path: string;
 }
 
-const DRIVE_REGEX = /\/d\/([A-Za-z0-9_-]+)/;
-const DRIVE_QUERY_REGEX = /[?&]id=([A-Za-z0-9_-]+)/;
+import { resolveProductImage } from "@/lib/product-image";
 
 function resolveImageUrl(url: string | null | undefined): string {
-  if (!url) return "";
-  if (url.includes("drive.google.com")) {
-    const match = url.match(DRIVE_REGEX) || url.match(DRIVE_QUERY_REGEX);
-    if (match?.[1]) return `https://drive.google.com/uc?id=${match[1]}`;
-  }
-  return url;
+  return resolveProductImage(url);
 }
 
 function searchCms(query: string, source: "product" | "diary", limit: number): SearchResult[] {

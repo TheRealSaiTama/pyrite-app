@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from '@/types/Product';
@@ -86,6 +87,70 @@ interface WeeklyPopularProductsProps {
   products?: any[];
 }
 
+const PopularProductCard = ({ product, index }: { product: Product; index: number }) => {
+  const [imgSrc, setImgSrc] = useState(product.image || PRODUCT_IMAGE_PLACEHOLDER);
+
+  useEffect(() => {
+    setImgSrc(product.image || PRODUCT_IMAGE_PLACEHOLDER);
+  }, [product.image]);
+
+  const base = typeof product.minPrice === "number" ? product.minPrice : product.price;
+  const displayPrice = typeof base === "number" && !Number.isNaN(base)
+    ? `₹${base.toLocaleString()}`
+    : 'On request';
+  const productHref = `/shop/${product.id || index}`;
+
+  return (
+    <div 
+      className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 relative justify-between"
+    >
+      <Link href={productHref} className="block flex-1 flex flex-col">
+        {/* Product Image */}
+        <div className="relative bg-slate-50/70 aspect-[4/3] overflow-hidden p-5 flex items-center justify-center block">
+          <Image
+            src={imgSrc}
+            alt={product.name}
+            fill
+            unoptimized={imgSrc.startsWith("data:")}
+            sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 100vw"
+            className="object-contain p-3 transition-transform duration-500 group-hover:scale-108"
+            onError={() => {
+              if (imgSrc !== PRODUCT_IMAGE_PLACEHOLDER) {
+                setImgSrc(PRODUCT_IMAGE_PLACEHOLDER);
+              }
+            }}
+          />
+          <span className="absolute top-3.5 right-3.5 bg-white/90 backdrop-blur-md rounded-full p-2 shadow-xs border border-slate-100 transition-all duration-300 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0">
+            <Image src="https://cdn.prod.website-files.com/63e857eaeaf853471d5335ff/63e9df775b939f51a0b22f6d_Icon.svg" alt="Wishlist" width={14} height={14} unoptimized />
+          </span>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 sm:p-5 flex flex-col flex-grow justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2 mb-1.5 group-hover:text-slate-700 transition-colors">
+              {product.name}
+            </h3>
+            <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed">
+              {product.description}
+            </p>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between mt-auto">
+            <div>
+              <span className="text-[9px] uppercase font-semibold text-slate-400 block">Price</span>
+              <p className="text-sm sm:text-base font-extrabold text-slate-900">{displayPrice}</p>
+            </div>
+            <span className="text-xs font-semibold text-slate-500 group-hover:text-[#0F172A] transition-colors flex items-center gap-1">
+              View →
+            </span>
+          </div>
+        </div>
+      </Link>
+    </div>
+  );
+};
+
 const WeeklyPopularProducts = ({ content, products: dbProducts }: WeeklyPopularProductsProps) => {
   const heading = content?.heading || "Trending Diary Giftsets";
   const selectedIds: string[] = (content?.items || [])
@@ -129,59 +194,9 @@ const WeeklyPopularProducts = ({ content, products: dbProducts }: WeeklyPopularP
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-          {items.map((product, index) => {
-            const base = typeof product.minPrice === "number" ? product.minPrice : product.price;
-            const displayPrice = typeof base === "number" && !Number.isNaN(base)
-              ? `₹${base.toLocaleString()}`
-              : 'On request';
-            const productHref = `/shop/${product.id || index}`;
-
-            return (
-              <div 
-                key={product.id || index} 
-                className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 relative justify-between"
-              >
-                <Link href={productHref} className="block flex-1 flex flex-col">
-                  {/* Product Image */}
-                  <div className="relative bg-slate-50/70 aspect-[4/3] overflow-hidden p-5 flex items-center justify-center block">
-                    <Image
-                      src={product.image || PRODUCT_IMAGE_PLACEHOLDER}
-                      alt={product.name}
-                      fill
-                      unoptimized={isRemoteOrDataImage(product.image || "")}
-                      sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 100vw"
-                      className="object-contain p-3 transition-transform duration-500 group-hover:scale-108"
-                    />
-                    <span className="absolute top-3.5 right-3.5 bg-white/90 backdrop-blur-md rounded-full p-2 shadow-xs border border-slate-100 transition-all duration-300 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0">
-                      <Image src="https://cdn.prod.website-files.com/63e857eaeaf853471d5335ff/63e9df775b939f51a0b22f6d_Icon.svg" alt="Wishlist" width={14} height={14} unoptimized />
-                    </span>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-4 sm:p-5 flex flex-col flex-grow justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2 mb-1.5 group-hover:text-slate-700 transition-colors">
-                        {product.name}
-                      </h3>
-                      <p className="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed">
-                        {product.description}
-                      </p>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between mt-auto">
-                      <div>
-                        <span className="text-[9px] uppercase font-semibold text-slate-400 block">Price</span>
-                        <p className="text-sm sm:text-base font-extrabold text-slate-900">{displayPrice}</p>
-                      </div>
-                      <span className="text-xs font-semibold text-slate-500 group-hover:text-[#0F172A] transition-colors flex items-center gap-1">
-                        View →
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            );
-          })}
+          {items.map((product, index) => (
+            <PopularProductCard key={product.id || index} product={product} index={index} />
+          ))}
         </div>
       </div>
     </section>

@@ -27,11 +27,11 @@ describe("resolveProductImage", () => {
     assert.equal(resolveProductImage(""), PRODUCT_IMAGE_PLACEHOLDER);
     assert.equal(resolveProductImage(null), PRODUCT_IMAGE_PLACEHOLDER);
   });
-  it("rewrites Drive uc links to thumbnail", () => {
+  it("rewrites Drive uc links to direct CDN URL", () => {
     const out = resolveProductImage(
       "https://drive.google.com/uc?id=1UcB8Gmh4knL15Su_DsD5D0WihKEFN6pH",
     );
-    assert.ok(out.includes("thumbnail"));
+    assert.ok(out.includes("lh3.googleusercontent.com") || out.includes("thumbnail"));
     assert.ok(out.includes("1UcB8Gmh4knL15Su_DsD5D0WihKEFN6pH"));
   });
   it("keeps site-relative product paths", () => {

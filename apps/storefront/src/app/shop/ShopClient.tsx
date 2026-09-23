@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Diary, Product } from '@prisma/client';
-import { resolveProductImage, isRemoteOrDataImage } from "@/lib/product-image";
+import { resolveProductImage, isRemoteOrDataImage, PRODUCT_IMAGE_PLACEHOLDER } from "@/lib/product-image";
 
 type ShopProduct = {
   id: string | number;
@@ -103,6 +103,55 @@ function filterAndSortProducts(products: ShopProduct[], filters: Filters): ShopP
     }
     return filters.sortOrder === 'asc' ? comparison : -comparison;
   });
+}
+
+function ShopCard({ product }: { product: ShopProduct }) {
+  const resolved = resolveProductImage(product.imageUrl);
+  const [imgSrc, setImgSrc] = useState(resolved);
+
+  useEffect(() => {
+    setImgSrc(resolveProductImage(product.imageUrl));
+  }, [product.imageUrl]);
+
+  return (
+    <article className="bg-white rounded-xl shadow-md hover:shadow-xl overflow-hidden transition-all duration-300 border border-gray-100 hover:border-primary/30 flex flex-col group">
+      <Link href={`/shop/${product.id}`} className="block flex-1 flex flex-col">
+        <div className="relative h-56 bg-gradient-to-br from-gray-50 to-white overflow-hidden">
+          <Image
+            src={imgSrc}
+            alt={product.name || "Product"}
+            fill
+            unoptimized={imgSrc.startsWith("data:")}
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+            onError={() => {
+              if (imgSrc !== PRODUCT_IMAGE_PLACEHOLDER) {
+                setImgSrc(PRODUCT_IMAGE_PLACEHOLDER);
+              }
+            }}
+          />
+          <div className="absolute top-2 right-2 bg-primary/80 backdrop-blur-xs text-white px-2.5 py-1 rounded-full text-xs font-medium opacity-0 group-hover:opacity-100 transition-all duration-300">
+            View Details
+          </div>
+        </div>
+        <div className="p-5 flex flex-col justify-between flex-1">
+          <h3 className="text-base font-semibold text-gray-800 line-clamp-2 mb-3 group-hover:text-primary transition-colors">
+            {product.name}
+          </h3>
+          <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
+            <span className="text-lg font-bold text-primary">
+              {typeof product.minPrice === 'number' && product.minPrice !== null
+                ? `₹${product.minPrice.toLocaleString()}`
+                : 'On request'}
+            </span>
+            <span className="text-xs font-semibold text-slate-500 group-hover:text-primary transition-colors flex items-center gap-1">
+              View →
+            </span>
+          </div>
+        </div>
+      </Link>
+    </article>
+  );
 }
 
 export default function ShopClient({
@@ -371,47 +420,9 @@ export default function ShopClient({
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {results.map((product) => {
-                  const imageUrl = resolveProductImage(product.imageUrl);
-
-                  return (
-                    <article
-                      key={String(product.id)}
-                      className="bg-white rounded-xl shadow-md hover:shadow-xl overflow-hidden transition-all duration-300 border border-gray-100 hover:border-primary/30 flex flex-col group"
-                    >
-                      <Link href={`/shop/${product.id}`} className="block flex-1 flex flex-col">
-                        <div className="relative h-56 bg-gradient-to-br from-gray-50 to-white overflow-hidden">
-                          <Image
-                            src={imageUrl}
-                            alt={product.name || "Product"}
-                            fill
-                            unoptimized={isRemoteOrDataImage(imageUrl)}
-                            className="object-cover group-hover:scale-105 transition-transform duration-500"
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                          />
-                          <div className="absolute top-2 right-2 bg-primary/80 backdrop-blur-xs text-white px-2.5 py-1 rounded-full text-xs font-medium opacity-0 group-hover:opacity-100 transition-all duration-300">
-                            View Details
-                          </div>
-                        </div>
-                        <div className="p-5 flex flex-col justify-between flex-1">
-                          <h3 className="text-base font-semibold text-gray-800 line-clamp-2 mb-3 group-hover:text-primary transition-colors">
-                            {product.name}
-                          </h3>
-                          <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
-                            <span className="text-lg font-bold text-primary">
-                              {typeof product.minPrice === 'number' && product.minPrice !== null
-                                ? `₹${product.minPrice.toLocaleString()}`
-                                : 'On request'}
-                            </span>
-                            <span className="text-xs font-semibold text-slate-500 group-hover:text-primary transition-colors flex items-center gap-1">
-                              View →
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    </article>
-                  );
-                })}
+                {results.map((product) => (
+                  <ShopCard key={String(product.id)} product={product} />
+                ))}
               </div>
             )}
           </div>

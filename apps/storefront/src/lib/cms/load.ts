@@ -114,12 +114,31 @@ export function cmsNav(groupKey: string): NavLinkOut[] {
   );
 }
 
+import { getDefaultCategoryNav } from "@/lib/catalog-categories";
+
 export function cmsMegaMenu(): MegaMenuItemOut[] {
-  const row = readCms().page_sections.find(
+  const sections = readCms().page_sections;
+  const row = sections.find(
     (s) => s.page_key === "site" && s.section_key === "mega_menu" && s.enabled !== false,
   );
+  const catSection = sections.find(
+    (s) => s.page_key === "catalog" && s.section_key === "categories",
+  );
+  const customSubcategories = catSection?.content?.customSubcategories;
+  const customCategories = catSection?.content?.customCategories;
+
   const items = row?.content?.items;
-  return mapMegaMenuItems(Array.isArray(items) ? items : []);
+  if (Array.isArray(items) && items.length > 0) {
+    return mapMegaMenuItems(items, customSubcategories);
+  }
+  return getDefaultCategoryNav(customCategories, customSubcategories).map((c, i) => ({
+    name: c.name,
+    subtitle: "",
+    image: "/logo.png",
+    href: c.href,
+    sort_order: i + 1,
+    subcategories: c.subcategories,
+  }));
 }
 
 export function cmsSections(pageKey: string): Record<string, Record<string, any>> {
@@ -166,7 +185,7 @@ export function cmsItemByIdOrSlug(id: string): CatalogItem | null {
   try {
     cleanId = decodeURIComponent(cleanId);
   } catch {}
-  const needle = cleanId.toLowerCase().trim();
+  const needle = cleanId.replace(/^\/+|\/+$/g, "").toLowerCase().trim();
   return (
     cmsCatalog().find(
       (r) => r.id.toLowerCase() === needle || r.slug.toLowerCase() === needle,

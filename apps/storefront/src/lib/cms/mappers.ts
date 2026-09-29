@@ -117,15 +117,24 @@ export type MegaMenuItemIn = {
   enabled?: boolean;
 };
 
+import {
+  STOREFRONT_SUBCATEGORIES,
+  getSubcategoriesForCategory,
+} from "@/lib/catalog-categories";
+
 export type MegaMenuItemOut = {
   name: string;
   subtitle: string;
   image: string;
   href: string;
   sort_order: number;
+  subcategories?: { name: string; href: string }[];
 };
 
-export function mapMegaMenuItems(raw: MegaMenuItemIn[] | null | undefined): MegaMenuItemOut[] {
+export function mapMegaMenuItems(
+  raw: MegaMenuItemIn[] | null | undefined,
+  customSubcategories?: Record<string, string[]>
+): MegaMenuItemOut[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((it) => it && it.enabled !== false)
@@ -136,12 +145,19 @@ export function mapMegaMenuItems(raw: MegaMenuItemIn[] | null | undefined): Mega
       const href =
         String(it.href || "").trim() ||
         (name ? `/shop?category=${encodeURIComponent(name)}` : "/shop");
+      const subcatNames = getSubcategoriesForCategory(name, customSubcategories);
+      const subcategories = subcatNames.map((sub) => ({
+        name: sub,
+        href: `/shop?category=${encodeURIComponent(name)}&subcategory=${encodeURIComponent(sub)}`,
+      }));
+
       return {
         name,
         subtitle,
         image: image || "/logo.png",
         href,
         sort_order: typeof it.sort_order === "number" ? it.sort_order : i + 1,
+        subcategories,
       };
     })
     .filter((it) => it.name)

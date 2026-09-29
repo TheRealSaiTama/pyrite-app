@@ -63,4 +63,40 @@ describe("storage & media upload persistence", () => {
     assert.equal(extracted.mime, "image/jpeg");
     assert.equal(extracted.filename, "test.jpg");
   });
+
+  it("re-reads from disk when cms-local.json mtime changes", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const firstRead = readCms();
+    assert.ok(firstRead.products.length > 0);
+
+    const testSlug = `cache-test-${Date.now()}`;
+    const testProduct = {
+      id: testSlug,
+      slug: testSlug,
+      name: "Cache Mtime Test Product",
+      min_price: 100,
+      max_price: 100,
+      enabled: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const filePath = path.join(dataDir(), "cms-local.json");
+    const diskContent = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    diskContent.products.push(testProduct);
+    // Write directly to disk bypassing in-memory writeCms
+    fs.writeFileSync(filePath, JSON.stringify(diskContent, null, 2), "utf8");
+    const nextTime = new Date(Date.now() + 2000);
+    fs.utimesSync(filePath, nextTime, nextTime);
+
+    // Next readCms must detect the file mtime change and include the new product
+    const secondRead = readCms();
+    const found = secondRead.products.find((p) => p.slug === testSlug);
+    assert.ok(found, "readCms must detect on-disk change and load new product without restart");
+
+    // Clean up
+    diskContent.products = diskContent.products.filter((p: any) => p.slug !== testSlug);
+    fs.writeFileSync(filePath, JSON.stringify(diskContent, null, 2), "utf8");
+  });
 });

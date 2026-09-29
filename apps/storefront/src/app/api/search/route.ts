@@ -39,7 +39,7 @@ function searchCms(query: string, source: "product" | "diary", limit: number): S
       imageUrl: resolveImageUrl(item.imageUrl ?? ""),
       category: item.category,
       source,
-      path: `/shop/${item.id}`,
+      path: `/shop/${item.slug || item.id}`,
     }));
 }
 

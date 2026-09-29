@@ -9,6 +9,7 @@ import { pickVisibleFeatures } from "@/lib/cms/mappers";
 
 interface Product {
   id: string | number;
+  slug?: string;
   name: string;
   category?: string | null;
   minPrice: number | null;
@@ -42,7 +43,7 @@ function specsFromFeatures(
 export default function ProductInfo({ product, chrome }: ProductInfoProps) {
   const moq = Math.max(1, Number(product.moq) || 50);
   const { cart, addToCart, toggleFavourite, isFavourite } = useCart();
-  const isFav = isFavourite(product.id);
+  const isFav = isFavourite(product.id, product.slug);
 
   const cartItem = cart.find((item) => String(item.id) === String(product.id));
   const isInCart = Boolean(cartItem);
@@ -260,7 +261,7 @@ export default function ProductInfo({ product, chrome }: ProductInfoProps) {
             </button>
             <button
               type="button"
-              onClick={() => toggleFavourite(product.id)}
+              onClick={() => toggleFavourite(product.id, product.slug)}
               className={`flex items-center justify-center gap-2 sm:w-auto px-6 py-4 rounded-lg font-semibold border-2 transition-all duration-200 cursor-pointer ${
                 isFav
                   ? 'bg-rose-50 border-rose-500 text-rose-600'

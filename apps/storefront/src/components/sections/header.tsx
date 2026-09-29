@@ -33,6 +33,8 @@ type SearchResultItem = {
   source: "diary" | "product";
 };
 
+import { getDefaultCategoryNav } from "@/lib/catalog-categories";
+
 type MegaItem = {
   name: string;
   subtitle?: string;
@@ -41,17 +43,7 @@ type MegaItem = {
   subcategories?: { name: string; href: string }[];
 };
 
-const FALLBACK_CATEGORIES: MegaItem[] = [
-  { name: "CORPORATE GIFT SETS", href: "/shop?category=CORPORATE+GIFT+SETS", subtitle: "120+ Packages" },
-  { name: "NEW YEAR DIARY", href: "/shop?category=NEW+YEAR+DIARY", subtitle: "80+ Styles" },
-  { name: "LEATHER GIFT ITEMS", href: "/shop?category=LEATHER+GIFT+ITEMS", subtitle: "Premium Collection" },
-  { name: "LEATHER BAGS", href: "/shop?category=LEATHER+BAGS", subtitle: "Executive Collection" },
-  { name: "JUTE BAGS", href: "/shop?category=JUTE+BAGS", subtitle: "Eco-Friendly" },
-  { name: "BOTTLES GIFT SET", href: "/shop?category=BOTTLES+GIFT+SET", subtitle: "Custom Flasks" },
-  { name: "CALENDARS", href: "/shop?category=CALENDARS", subtitle: "Yearly Planners" },
-  { name: "EXHIBITION GIFTS", href: "/shop?category=EXHIBITION+VISITOR%27S+GIFT+IDEAS", subtitle: "Event Specials" },
-  { name: "CUSTOM PRINT DIARIES", href: "/custom-design", subtitle: "Personalized Branding" },
-];
+const FALLBACK_CATEGORIES: MegaItem[] = getDefaultCategoryNav();
 
 const Header = ({
   nav,
@@ -351,7 +343,7 @@ const Header = ({
           <div className="flex items-center gap-4 sm:gap-7 shrink-0">
             {/* Favourites Button */}
             <Link
-              href="/shop?filter=featured"
+              href="/favourites"
               className="flex flex-col items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors group relative px-1 py-0.5 cursor-pointer"
               title="View Favourites"
             >
@@ -490,30 +482,30 @@ const Header = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="p-6 w-[min(92vw,700px)] max-h-[70vh] overflow-y-auto rounded-2xl shadow-2xl border border-slate-100 z-50 bg-white"
+              className="p-6 sm:p-8 w-[min(96vw,1080px)] max-h-[75vh] overflow-y-auto rounded-2xl shadow-2xl border border-slate-100 z-50 bg-white"
             >
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 pb-2 border-b border-slate-100 flex items-center justify-between">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-6 pb-2.5 border-b border-slate-100 flex items-center justify-between">
                 <span>Our Product Categories</span>
                 <span className="font-normal normal-case text-slate-500">Factory direct catalogue</span>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 sm:gap-x-10 gap-y-7">
                 {categoriesToDisplay.map((item) => (
-                  <div key={item.name} className="min-w-0">
+                  <div key={item.name} className="min-w-0 flex flex-col">
                     <Link
                       href={item.href}
                       prefetch={false}
-                      className="text-xs font-semibold text-slate-900 hover:text-[#0F172A] uppercase tracking-wide block transition-colors"
+                      className="text-xs font-bold text-slate-900 hover:text-amber-800 uppercase tracking-wider block transition-colors pb-1 border-b border-slate-100"
                     >
                       {item.name}
                     </Link>
                     {item.subcategories && item.subcategories.length > 0 && (
-                      <ul className="mt-1.5 space-y-1">
+                      <ul className="mt-2 space-y-1.5">
                         {item.subcategories.map((sub) => (
                           <li key={sub.name}>
                             <Link
                               href={sub.href}
                               prefetch={false}
-                              className="text-[11px] text-slate-500 hover:text-[#0F172A] transition-colors"
+                              className="text-[12px] text-slate-500 hover:text-[#0F172A] hover:underline transition-colors block py-0.5 leading-snug"
                             >
                               {sub.name}
                             </Link>
@@ -524,11 +516,11 @@ const Header = ({
                   </div>
                 ))}
               </div>
-              <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <div className="mt-6 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-500">Over 500+ premium corporate styles</span>
                 <Link
                   href="/shop"
-                  className="font-semibold text-slate-900 hover:underline"
+                  className="font-semibold text-slate-900 hover:text-amber-800 hover:underline transition-colors"
                 >
                   View Full Catalog →
                 </Link>
@@ -575,18 +567,33 @@ const Header = ({
           </div>
           <div className="pt-2 border-t border-slate-100">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-2 mb-2">
-              Categories
+              Categories & Subcategories
             </p>
-            <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto px-1">
+            <div className="space-y-2.5 max-h-72 overflow-y-auto px-2 pr-1 custom-scrollbar">
               {categoriesToDisplay.map((cat) => (
-                <Link
-                  key={cat.name}
-                  href={cat.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-xs text-slate-700 hover:text-[#0F172A] py-1 truncate"
-                >
-                  {cat.name}
-                </Link>
+                <div key={cat.name} className="border-b border-slate-50 pb-2 last:border-0">
+                  <Link
+                    href={cat.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-xs font-bold uppercase tracking-wider text-slate-900 hover:text-amber-800 block py-1"
+                  >
+                    {cat.name}
+                  </Link>
+                  {cat.subcategories && cat.subcategories.length > 0 && (
+                    <div className="pl-2 pt-0.5 flex flex-wrap gap-x-3 gap-y-1">
+                      {cat.subcategories.map((sub) => (
+                        <Link
+                          key={sub.name}
+                          href={sub.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="text-[11px] text-slate-500 hover:text-[#0F172A] py-0.5"
+                        >
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>

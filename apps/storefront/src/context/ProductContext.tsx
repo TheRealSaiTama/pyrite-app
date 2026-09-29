@@ -39,8 +39,9 @@ interface ProductContextType {
 
   // Favourites
   favourites: (string | number)[];
-  toggleFavourite: (id: string | number) => void;
-  isFavourite: (id: string | number) => boolean;
+  toggleFavourite: (id: string | number, slug?: string) => void;
+  removeFromFavourites: (id: string | number, slug?: string) => void;
+  isFavourite: (id: string | number, slug?: string) => boolean;
 
   // Backwards compatibility for legacy enquiry modals
   selectedProducts: Product[];
@@ -170,16 +171,42 @@ export function ProductProvider({ children }: { children: ReactNode }) {
     setCart((prev) => (prev.length === 0 ? prev : []));
   }, []);
 
-  const toggleFavourite = useCallback((id: string | number) => {
+  const removeFromFavourites = useCallback((id: string | number, slug?: string) => {
+    const idStr = String(id).toLowerCase();
+    const slugStr = slug ? String(slug).toLowerCase() : "";
     setFavourites((prev) =>
-      prev.some((f) => String(f) === String(id))
-        ? prev.filter((f) => String(f) !== String(id))
-        : [...prev, id],
+      prev.filter((f) => {
+        const fStr = String(f).toLowerCase();
+        return fStr !== idStr && (!slugStr || fStr !== slugStr);
+      }),
     );
   }, []);
 
-  const isFavourite = useCallback((id: string | number) => {
-    return favourites.some((f) => String(f) === String(id));
+  const toggleFavourite = useCallback((id: string | number, slug?: string) => {
+    const idStr = String(id).toLowerCase();
+    const slugStr = slug ? String(slug).toLowerCase() : "";
+    setFavourites((prev) => {
+      const exists = prev.some((f) => {
+        const fStr = String(f).toLowerCase();
+        return fStr === idStr || (slugStr && fStr === slugStr);
+      });
+      if (exists) {
+        return prev.filter((f) => {
+          const fStr = String(f).toLowerCase();
+          return fStr !== idStr && (!slugStr || fStr !== slugStr);
+        });
+      }
+      return [...prev, id];
+    });
+  }, []);
+
+  const isFavourite = useCallback((id: string | number, slug?: string) => {
+    const idStr = String(id).toLowerCase();
+    const slugStr = slug ? String(slug).toLowerCase() : "";
+    return favourites.some((f) => {
+      const fStr = String(f).toLowerCase();
+      return fStr === idStr || (slugStr && fStr === slugStr);
+    });
   }, [favourites]);
 
   // Calculations
@@ -221,6 +248,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       cartTotal,
       favourites,
       toggleFavourite,
+      removeFromFavourites,
       isFavourite,
       selectedProducts,
       selectProduct,
@@ -240,6 +268,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       cartTotal,
       favourites,
       toggleFavourite,
+      removeFromFavourites,
       isFavourite,
       selectedProducts,
       selectProduct,

@@ -30,6 +30,12 @@ const TABLES: (keyof CmsDb)[] = [
 const LOCAL_OWNER = "00000000-0000-4000-8000-000000000001";
 
 let cache: CmsDb | null = null;
+let cachedMtime = 0;
+
+export function clearCmsCache() {
+  cache = null;
+  cachedMtime = 0;
+}
 
 function isDirectoryWritable(dir: string): boolean {
   try {
@@ -427,11 +433,15 @@ export function sanitizeMediaAssets(db: CmsDb) {
 }
 
 export function readCms(): CmsDb {
-  if (cache) return cache;
   const file = dbPath();
   if (fs.existsSync(file)) {
     try {
+      const stat = fs.statSync(file);
+      if (cache && stat.mtimeMs === cachedMtime) {
+        return cache;
+      }
       cache = JSON.parse(fs.readFileSync(file, "utf8")) as CmsDb;
+      cachedMtime = stat.mtimeMs;
       sanitizeMediaAssets(cache);
       return cache!;
     } catch {
@@ -447,7 +457,12 @@ export function readCms(): CmsDb {
   for (const s of seedCandidates) {
     if (fs.existsSync(s)) {
       try {
+        const stat = fs.statSync(s);
+        if (cache && stat.mtimeMs === cachedMtime) {
+          return cache;
+        }
         cache = JSON.parse(fs.readFileSync(s, "utf8")) as CmsDb;
+        cachedMtime = stat.mtimeMs;
         sanitizeMediaAssets(cache);
         writeCms(cache);
         return cache!;
@@ -455,6 +470,7 @@ export function readCms(): CmsDb {
     }
   }
 
+  if (cache) return cache;
   cache = buildSeed();
   sanitizeMediaAssets(cache);
   writeCms(cache);
@@ -467,6 +483,9 @@ export function writeCms(db: CmsDb) {
     const file = dbPath();
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, JSON.stringify(db, null, 2), "utf8");
+    try {
+      cachedMtime = fs.statSync(file).mtimeMs;
+    } catch {}
   } catch {
     // In-memory cache still serves the request if disk write fails
   }

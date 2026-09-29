@@ -179,7 +179,12 @@ function getSubcategory(item: CatalogItem, category: string): string {
   const tagsLower = (item.tags || []).map((t) => t.toLowerCase());
 
   const hasKeyword = (keywords: string[]) =>
-    keywords.some((k) => nameLower.includes(k) || tagsLower.some((t) => t.includes(k)));
+    keywords.some((k) => {
+      if (k === "eco") {
+        return /\beco\b/i.test(nameLower) || tagsLower.some((t) => /\beco\b/i.test(t));
+      }
+      return nameLower.includes(k) || tagsLower.some((t) => t.includes(k));
+    });
 
   if (categoryNorm === "CORPORATE GIFT SETS" || categoryNorm === "CORPORATE GIFT SET") {
     if (hasKeyword(["diary and pen", "diary & pen", "pen set"])) return "Diary & Pen Sets";

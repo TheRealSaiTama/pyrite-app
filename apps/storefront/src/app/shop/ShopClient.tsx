@@ -31,6 +31,7 @@ interface Filters {
   category: string[];
   subcategory: string | null;
   materials: string[];
+  search: string | null;
   minPrice: number;
   maxPrice: number;
   sortBy: 'name' | 'price';
@@ -80,6 +81,18 @@ function categoryMatches(productCategory: string, filterCat: string): boolean {
 
 function filterAndSortProducts(products: ShopProduct[], filters: Filters): ShopProduct[] {
   let filtered: ShopProduct[] = products;
+
+  if (filters.search) {
+    const q = filters.search.toLowerCase().trim();
+    if (q) {
+      filtered = filtered.filter((product: ShopProduct) => {
+        const nameMatch = product.name.toLowerCase().includes(q);
+        const descMatch = product.description ? product.description.toLowerCase().includes(q) : false;
+        const catMatch = product.category ? product.category.toLowerCase().includes(q) : false;
+        return nameMatch || descMatch || catMatch;
+      });
+    }
+  }
 
   if (filters.category.length > 0) {
     filtered = filtered.filter(
@@ -193,7 +206,9 @@ export default function ShopClient({
     empty_state?: string;
   };
 }) {
-  const heading = chrome?.heading?.trim() || "Our Products";
+  const heading = filters.search
+    ? `Search results for "${filters.search}"`
+    : chrome?.heading?.trim() || "Our Products";
   const emptyState =
     chrome?.empty_state?.trim() ||
     "No products match your filters. Try clearing filters.";
@@ -203,6 +218,7 @@ export default function ShopClient({
     category: [],
     subcategory: null,
     materials: [],
+    search: null,
     minPrice: 0,
     maxPrice: 0,
     sortBy: 'price',
@@ -272,11 +288,14 @@ export default function ShopClient({
       }
     }
 
+    const searchParam = searchParams.get('search') || searchParams.get('q') || null;
+
     setFilters((prev) => {
       const catChanged = !arraysEqual(prev.category, nextCategories);
       const subChanged = prev.subcategory !== subcategoryParam;
       const matChanged = !arraysEqual(prev.materials, nextMaterials);
-      if (!catChanged && !subChanged && !matChanged) {
+      const searchChanged = prev.search !== searchParam;
+      if (!catChanged && !subChanged && !matChanged && !searchChanged) {
         return prev;
       }
       return {
@@ -284,6 +303,7 @@ export default function ShopClient({
         category: nextCategories,
         subcategory: subcategoryParam,
         materials: nextMaterials,
+        search: searchParam,
       };
     });
   }, [searchParams]);
@@ -345,6 +365,7 @@ export default function ShopClient({
       category: [],
       subcategory: null,
       materials: [],
+      search: null,
       minPrice: 0,
       maxPrice: 0,
       sortBy: 'price',
@@ -398,6 +419,7 @@ export default function ShopClient({
     filters.category.length +
     (filters.subcategory ? 1 : 0) +
     filters.materials.length +
+    (filters.search ? 1 : 0) +
     (filters.minPrice > 0 ? 1 : 0) +
     (filters.maxPrice > 0 ? 1 : 0);
 
@@ -615,12 +637,26 @@ export default function ShopClient({
           {(filters.category.length > 0 ||
             filters.subcategory ||
             filters.materials.length > 0 ||
+            filters.search ||
             filters.minPrice > 0 ||
             filters.maxPrice > 0) && (
             <div className="flex flex-wrap items-center gap-2 mb-6 p-3 bg-white rounded-xl border border-slate-100 shadow-2xs">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">
                 Active:
               </span>
+              {filters.search && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-900 text-white">
+                  <span className="truncate max-w-[160px]">Search: &ldquo;{filters.search}&rdquo;</span>
+                  <button
+                    type="button"
+                    onClick={() => setFilters((prev) => ({ ...prev, search: null }))}
+                    className="hover:opacity-75 cursor-pointer"
+                    aria-label="Remove search filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
               {filters.category.map((cat) => (
                 <span
                   key={cat}

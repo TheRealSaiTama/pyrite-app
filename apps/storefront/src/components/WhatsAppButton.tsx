@@ -38,7 +38,7 @@ const WhatsAppButton = () => {
       return;
     }
 
-    window.open(whatsappWebUrl, '_blank', 'noopener');
+    window.open(whatsappWebUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (

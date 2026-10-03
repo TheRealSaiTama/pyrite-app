@@ -5,6 +5,10 @@ import { getStorefrontData } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Order Placed Successfully | Pyrite Corporate Gifts",
   description: "Thank you for your order. Our sales executive will contact you shortly with the proforma invoice.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const revalidate = 0;

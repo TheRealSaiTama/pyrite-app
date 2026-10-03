@@ -9,6 +9,7 @@ import { Toaster } from "sonner";
 import { ProductProvider } from '@/context/ProductContext';
 import { getSettings, getSeo } from "@/lib/site";
 import { DEFAULT_BRAND_NAME, DEFAULT_SITE_URL, normalizePublicSiteUrl } from "@/lib/cms/mappers";
+import { buildOrganizationSchema, buildWebSiteSchema } from "@/lib/seo";
 
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -33,10 +34,18 @@ export async function generateMetadata(): Promise<Metadata> {
       description: defaultDescription,
       keywords: [
         "customised diaries",
+        "customised diaries 2026",
         "personalised notebooks",
         "corporate gifts india",
+        "corporate gifts delhi",
         "diary printing 2026",
+        "executive planners b2b",
+        "bulk corporate gifts",
+        "customised note books",
+        "leatherette diaries",
+        "promotional gift hampers",
         brand.toLowerCase(),
+        "b2b corporate procurement",
         "custom planners",
       ],
       alternates: { canonical: "/" },
@@ -68,15 +77,42 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const enableVisualEdits = process.env.NEXT_PUBLIC_ENABLE_VISUAL_EDITS === "true";
+  const settings = await getSettings().catch(() => null);
+  const brand = settings?.brandName || DEFAULT_BRAND_NAME;
+  const siteUrl = normalizePublicSiteUrl(settings?.siteUrl);
+
+  const orgSchema = buildOrganizationSchema({
+    brandName: brand,
+    siteUrl,
+    logoUrl: settings?.logoUrl,
+    phone: settings?.phone,
+    email: settings?.email,
+    address: settings?.address,
+  });
+
+  const webSiteSchema = buildWebSiteSchema({
+    brandName: brand,
+    siteUrl,
+  });
 
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(webSiteSchema) }}
+        />
+      </head>
       <body className="antialiased">
         <ProductProvider>
           {enableVisualEdits && <ErrorReporter />}

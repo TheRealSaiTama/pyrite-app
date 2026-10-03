@@ -22,10 +22,13 @@ import {
   ChevronRight,
   PackageCheck,
   CheckCircle,
+  HelpCircle,
 } from "lucide-react";
 import Header from "@/components/sections/header";
 import Footer from "@/components/sections/footer";
 import { getStorefrontData } from "@/lib/site";
+import { buildFaqSchema, buildBreadcrumbSchema } from "@/lib/seo";
+import { normalizePublicSiteUrl } from "@/lib/cms/mappers";
 
 export const revalidate = 0;
 
@@ -33,7 +36,50 @@ export const metadata: Metadata = {
   title: "Bulk Orders & B2B Corporate Procurement | Pyrite",
   description:
     "Direct-from-manufacturer corporate diaries, daily planners, executive notebooks, and curated gift combos. High-volume B2B manufacturing in Delhi with trackable PAN-India delivery.",
+  alternates: {
+    canonical: "/bulk-orders",
+  },
+  openGraph: {
+    title: "Bulk Orders & B2B Corporate Procurement | Pyrite",
+    description:
+      "Direct-from-manufacturer corporate diaries, daily planners, executive notebooks, and curated gift combos. High-volume B2B manufacturing in Delhi with trackable PAN-India delivery.",
+    url: "/bulk-orders",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bulk Orders & B2B Corporate Procurement | Pyrite",
+    description:
+      "Direct-from-manufacturer corporate diaries, daily planners, executive notebooks, and curated gift combos. High-volume B2B manufacturing in Delhi with trackable PAN-India delivery.",
+  },
 };
+
+const B2B_FAQS = [
+  {
+    question: "What is the minimum order quantity (MOQ) for custom corporate diaries?",
+    answer: "Our standard minimum order quantity begins at 50 to 100 units depending on the diary series. For customized debossing, hot foil stamping, custom inserts, or custom colorways, orders typically scale from 100 up to 10,000+ units with tiered volume pricing.",
+  },
+  {
+    question: "Can we print our corporate logo and company profile pages inside?",
+    answer: "Yes. In addition to cover debossing, foil stamping, and laser engraving, we manufacture customized 4-page, 8-page, or 16-page corporate color inserts, watermarked inner pages, calendar grids, and personalized inner bookmark ribbons.",
+  },
+  {
+    question: "What are your standard turnaround and delivery timelines?",
+    answer: "Standard production lead time is typically 5 to 10 working days following digital proof approval. Shipments are dispatched directly from our Delhi manufacturing hub via surface, express train, or air cargo with PAN-India tracking (usually 2 to 7 transit days).",
+  },
+  {
+    question: "Do you supply physical pre-production samples before full manufacturing?",
+    answer: "Yes, verified enterprise buyers and corporate procurement desks can request physical sample pieces to evaluate cover material, PU leather texture, stitching, paper thickness (70–100 GSM), and binding strength before issuing a formal PO.",
+  },
+  {
+    question: "Are GST invoices provided for input tax credit (ITC)?",
+    answer: "Yes. All B2B corporate orders receive formal GST invoices (standard 18% GST on corporate stationery and gifting) allowing complete Input Tax Credit (ITC) reconciliation for your finance department.",
+  },
+  {
+    question: "Can we customize coordinated gift sets (diaries, pens, bottles, and accessories)?",
+    answer: "Absolutely. We engineer matched 2-in-1, 3-in-1, and 4-in-1 executive gift combos pairing custom diaries with laser-engraved metal pens, leather keychains, stainless steel thermal bottles, and cardholders in premium rigid gift boxes.",
+  },
+];
 
 const PROCUREMENT_CATEGORIES = [
   {
@@ -136,8 +182,26 @@ export default async function BulkOrdersPage() {
     "Hi Pyrite team, we are planning a bulk B2B order of corporate diaries / gift sets and would like to receive product catalogs and a formal quote."
   )}`;
 
+  const siteUrl = normalizePublicSiteUrl(data.settings?.siteUrl);
+  const faqSchema = buildFaqSchema(B2B_FAQS);
+  const breadcrumbSchema = buildBreadcrumbSchema(
+    [
+      { name: "Home", url: "/" },
+      { name: "Bulk Orders & Corporate Procurement", url: "/bulk-orders" },
+    ],
+    siteUrl
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <Header
         nav={data.headerNav}
         megaMenu={data.megaMenu}
@@ -351,6 +415,44 @@ export default async function BulkOrdersPage() {
                   </a>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 5: Frequently Asked Questions (FAQ) */}
+        <section className="bg-slate-50 py-14 lg:py-18 border-t border-slate-200">
+          <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-12 max-w-2xl">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">
+                Knowledge Base
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight mb-3">
+                Frequently Asked Procurement Questions
+              </h2>
+              <p className="text-sm sm:text-base text-slate-600">
+                Direct answers to common questions about volume orders, customization methods, lead times, and GST invoicing.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {B2B_FAQS.map((faq, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white rounded-2xl p-6 sm:p-7 border border-slate-200/80 shadow-2xs hover:shadow-sm transition-all"
+                >
+                  <div className="flex items-start gap-3.5 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-800 shrink-0 mt-0.5">
+                      <HelpCircle className="w-4 h-4 text-slate-700" />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900 leading-snug">
+                      {faq.question}
+                    </h3>
+                  </div>
+                  <p className="text-sm text-slate-600 leading-relaxed pl-11">
+                    {faq.answer}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </section>

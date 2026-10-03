@@ -120,10 +120,18 @@ export default function CustomDesignClient({
           <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-[#1a5d73]/15 to-[#2a6b80]/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-6 py-24">
+        <div className="relative z-10 max-w-7xl mx-auto px-6 py-16 sm:py-20">
+          <div className="text-center max-w-3xl mx-auto mb-16 sm:mb-20">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#0F172A] tracking-tight mb-4">
+              {content?.heading || "Custom Corporate Diary & Notebook Branding Solutions"}
+            </h1>
+            <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
+              Explore high-precision debossing, metallic foil stamping, screen printing, and bespoke corporate branding techniques engineered directly on our factory floor.
+            </p>
+          </div>
           {techniques.map((tech, index) => {
             const imageLeft = index % 2 === 0;
-            const HeadingTag = index === 0 ? "h1" : "h2";
+            const HeadingTag = "h2";
             const image = (
               <motion.div
                 initial={{ opacity: 0, x: imageLeft ? -50 : 50 }}
@@ -135,7 +143,7 @@ export default function CustomDesignClient({
                 <div className="relative aspect-[4/3] rounded-[32px] overflow-hidden shadow-2xl">
                   <Image
                     src={tech.image_url || "/custom-design/thermal-debossing.jpg"}
-                    alt={tech.title || "Custom design"}
+                    alt={tech.title ? `${tech.title} - Custom Corporate Diary Printing` : "Custom corporate diary branding"}
                     fill
                     unoptimized={isRemoteOrDataImage(tech.image_url || "")}
                     className="object-cover"

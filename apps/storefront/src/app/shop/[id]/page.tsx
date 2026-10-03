@@ -9,6 +9,8 @@ import ProductReviewsAndTags from "@/components/product/ProductReviewsAndTags";
 import RelatedProducts from "@/components/product/RelatedProducts";
 import { getStorefrontData, getProductChrome } from "@/lib/site";
 import { cmsItemByIdOrSlug, cmsCatalog } from "@/lib/cms/load";
+import { buildProductSchema, buildBreadcrumbSchema } from "@/lib/seo";
+import { DEFAULT_BRAND_NAME, normalizePublicSiteUrl } from "@/lib/cms/mappers";
 
 export const revalidate = 0;
 
@@ -18,17 +20,51 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const resolvedParams = await params;
-  const product = await getProduct(resolvedParams.id);
+  const [product, storefront] = await Promise.all([
+    getProduct(resolvedParams.id),
+    getStorefrontData().catch(() => null),
+  ]);
   if (!product) return {};
-  const title = product.seoTitle || product.name;
-  const description = product.seoDescription || product.description || product.name;
+
+  const brand = storefront?.settings?.brandName || DEFAULT_BRAND_NAME;
+  const siteUrl = normalizePublicSiteUrl(storefront?.settings?.siteUrl);
+
+  const title = product.seoTitle || `${product.name} | Customised Corporate Diaries & Gifts`;
+  const description =
+    product.seoDescription ||
+    (product.description
+      ? product.description.slice(0, 160)
+      : `${product.name} - Premium customized corporate diary and planner by ${brand}.`);
+  const canonicalUrl = `/shop/${encodeURIComponent(product.id)}`;
+  const ogImage = product.imageUrl
+    ? product.imageUrl.startsWith("http")
+      ? product.imageUrl
+      : `${siteUrl}${product.imageUrl.startsWith("/") ? "" : "/"}${product.imageUrl}`
+    : undefined;
+
   return {
     title,
-    description: description.slice(0, 200),
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
       title,
-      description: description.slice(0, 200),
-      images: product.imageUrl ? [{ url: product.imageUrl }] : undefined,
+      description,
+      url: canonicalUrl,
+      siteName: brand,
+      type: "website",
+      images: ogImage ? [{ url: ogImage, alt: product.name }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
+    },
+    robots: {
+      index: product.enabled !== false,
+      follow: true,
     },
   };
 }
@@ -110,9 +146,40 @@ export default async function ProductDetailPage({
 
   const relatedProducts = await getRelatedProducts(product.category || "", product.id);
   const { settings, headerNav, megaMenu, footerLinks } = storefront;
+  const brandName = settings?.brandName || DEFAULT_BRAND_NAME;
+  const siteUrl = normalizePublicSiteUrl(settings?.siteUrl);
+
+  const productSchema = buildProductSchema({
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    imageUrl: product.imageUrl,
+    gallery: product.gallery,
+    minPrice: product.minPrice,
+    maxPrice: product.maxPrice,
+    brandName,
+    siteUrl,
+    enabled: product.enabled,
+  });
+
+  const primaryCategory = product.category?.split(",")[0]?.trim() || "Shop";
+  const breadcrumbItems = [
+    { name: "Home", url: "/" },
+    { name: primaryCategory, url: `/shop?category=${encodeURIComponent(primaryCategory)}` },
+    { name: product.name, url: `/shop/${encodeURIComponent(product.id)}` },
+  ];
+  const breadcrumbsSchema = buildBreadcrumbSchema(breadcrumbItems, siteUrl);
 
   return (
     <div className="min-h-screen bg-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsSchema) }}
+      />
       <Header
         nav={headerNav}
         megaMenu={megaMenu}

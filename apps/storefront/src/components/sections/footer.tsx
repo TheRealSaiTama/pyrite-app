@@ -428,6 +428,24 @@ export default function Footer({
         </li>
       );
     }
+    const isExternal =
+      href.startsWith("http://") ||
+      href.startsWith("https://") ||
+      href.startsWith("//");
+    if (isExternal) {
+      return (
+        <li key={`${item.label}-${i}`}>
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-medium-gray hover:text-primary transition-colors"
+          >
+            {item.label}
+          </a>
+        </li>
+      );
+    }
     return (
       <li key={`${item.label}-${i}`}>
         <Link href={href} className="text-sm text-medium-gray hover:text-primary transition-colors">
@@ -497,7 +515,7 @@ export default function Footer({
       <div className="container">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           <div>
-            <a href="#" className="inline-block mb-6 max-h-9">
+            <Link href="/" className="inline-block mb-6 max-h-9">
               <Image
                 src={logoSrc}
                 alt={`${brand} logo`}
@@ -505,7 +523,7 @@ export default function Footer({
                 height={34}
                 className="h-9 w-auto max-h-9 object-contain object-left"
               />
-            </a>
+            </Link>
             <h3 className="text-base font-bold text-foreground mb-4">CONTACT INFO</h3>
             <ul className="space-y-4 text-sm text-medium-gray">
               <li>{brand}</li>

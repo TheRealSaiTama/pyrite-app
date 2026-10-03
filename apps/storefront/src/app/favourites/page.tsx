@@ -10,6 +10,10 @@ export const revalidate = 0;
 export const metadata: Metadata = {
   title: "My Wishlist | Pyrite",
   description: "View and manage your saved favourite diaries, executive planners, and corporate gifts.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function FavouritesPage() {

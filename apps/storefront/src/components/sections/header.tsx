@@ -530,16 +530,32 @@ const Header = ({
 
           {/* Secondary Nav Links in plain text */}
           <nav className="flex items-center gap-6 lg:gap-8">
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={item.href === "#about" ? handleContactClick : undefined}
-                className="text-sm font-medium text-slate-700 hover:text-[#0F172A] transition-colors py-1"
-              >
-                {item.label}
-              </Link>
-            ))}
+            {navItems.map((item) => {
+              const isExt = item.href.startsWith("http://") || item.href.startsWith("https://") || item.href.startsWith("//");
+              if (isExt) {
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-slate-700 hover:text-[#0F172A] transition-colors py-1"
+                  >
+                    {item.label}
+                  </a>
+                );
+              }
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={item.href === "#about" ? handleContactClick : undefined}
+                  className="text-sm font-medium text-slate-700 hover:text-[#0F172A] transition-colors py-1"
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         </div>
       </div>
@@ -551,19 +567,36 @@ const Header = ({
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-2">
               Navigation
             </p>
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={(e) => {
-                  setIsMobileMenuOpen(false);
-                  if (item.href === "#about") handleContactClick(e);
-                }}
-                className="block px-2 py-2 text-sm font-medium text-slate-800 hover:text-[#0F172A] hover:bg-slate-50 rounded-md transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
+            {navItems.map((item) => {
+              const isExt = item.href.startsWith("http://") || item.href.startsWith("https://") || item.href.startsWith("//");
+              if (isExt) {
+                return (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block px-2 py-2 text-sm font-medium text-slate-800 hover:text-[#0F172A] hover:bg-slate-50 rounded-md transition-colors"
+                  >
+                    {item.label}
+                  </a>
+                );
+              }
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  onClick={(e) => {
+                    setIsMobileMenuOpen(false);
+                    if (item.href === "#about") handleContactClick(e);
+                  }}
+                  className="block px-2 py-2 text-sm font-medium text-slate-800 hover:text-[#0F172A] hover:bg-slate-50 rounded-md transition-colors"
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </div>
           <div className="pt-2 border-t border-slate-100">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-2 mb-2">

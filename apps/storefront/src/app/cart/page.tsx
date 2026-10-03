@@ -5,6 +5,10 @@ import { getStorefrontData } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Shopping Cart | Pyrite Corporate Gifts",
   description: "Review your selected diaries and corporate gifts, calculate GST, and request your proforma invoice.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const revalidate = 0;

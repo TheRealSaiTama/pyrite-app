@@ -117,20 +117,98 @@ export function cmsNav(groupKey: string): NavLinkOut[] {
 import { getDefaultCategoryNav } from "@/lib/catalog-categories";
 
 export function cmsMegaMenu(): MegaMenuItemOut[] {
-  const sections = readCms().page_sections;
+  const db = readCms();
+  const sections = db.page_sections;
   const row = sections.find(
     (s) => s.page_key === "site" && s.section_key === "mega_menu" && s.enabled !== false,
   );
   const catSection = sections.find(
     (s) => s.page_key === "catalog" && s.section_key === "categories",
   );
+  const homeCatSection = sections.find(
+    (s) => s.page_key === "home" && s.section_key === "categories",
+  );
+
   const customSubcategories = catSection?.content?.customSubcategories;
   const customCategories = catSection?.content?.customCategories;
+  const homeCatItems = Array.isArray(homeCatSection?.content?.items)
+    ? homeCatSection.content.items
+    : [];
 
-  const items = row?.content?.items;
-  if (Array.isArray(items) && items.length > 0) {
-    return mapMegaMenuItems(items, customSubcategories);
+  const baseItems: any[] = Array.isArray(row?.content?.items)
+    ? [...row.content.items]
+    : [];
+
+  // ponytail: ensure any category added via homepage controls or catalog metadata appears in navbar mega-menu
+  const seen = new Set<string>();
+  for (const it of baseItems) {
+    if (it?.name) seen.add(String(it.name).trim().toUpperCase());
   }
+
+  // 1. Merge categories from home:categories
+  for (const h of homeCatItems) {
+    if (!h?.name) continue;
+    const norm = String(h.name).trim().toUpperCase();
+    if (!seen.has(norm)) {
+      seen.add(norm);
+      baseItems.push({
+        name: norm,
+        subtitle: h.subtitle || "Explore Collection",
+        image_url: h.image_url || h.image || "/logo.png",
+        href: h.href || `/shop?category=${encodeURIComponent(norm)}`,
+        sort_order: typeof h.sort_order === "number" ? h.sort_order : baseItems.length + 1,
+        enabled: true,
+      });
+    }
+  }
+
+  // 2. Merge categories from catalog:categories (customCategories)
+  if (Array.isArray(customCategories)) {
+    for (const c of customCategories) {
+      const name = typeof c === "string" ? c : c?.name;
+      if (!name) continue;
+      const norm = String(name).trim().toUpperCase();
+      if (!seen.has(norm)) {
+        seen.add(norm);
+        baseItems.push({
+          name: norm,
+          subtitle: "Explore Collection",
+          image_url: "/logo.png",
+          href: `/shop?category=${encodeURIComponent(norm)}`,
+          sort_order: baseItems.length + 1,
+          enabled: true,
+        });
+      }
+    }
+  }
+
+  // 3. Merge distinct categories from active catalog products and diaries
+  const catalog = cmsCatalog();
+  for (const item of catalog) {
+    if (!item.category) continue;
+    const parts = String(item.category)
+      .split(",")
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
+    for (const cat of parts) {
+      if (!seen.has(cat)) {
+        seen.add(cat);
+        baseItems.push({
+          name: cat,
+          subtitle: "Explore Collection",
+          image_url: item.imageUrl || "/logo.png",
+          href: `/shop?category=${encodeURIComponent(cat)}`,
+          sort_order: baseItems.length + 1,
+          enabled: true,
+        });
+      }
+    }
+  }
+
+  if (baseItems.length > 0) {
+    return mapMegaMenuItems(baseItems, customSubcategories);
+  }
+
   return getDefaultCategoryNav(customCategories, customSubcategories).map((c, i) => ({
     name: c.name,
     subtitle: "",
@@ -142,8 +220,9 @@ export function cmsMegaMenu(): MegaMenuItemOut[] {
 }
 
 export function cmsSections(pageKey: string): Record<string, Record<string, any>> {
-  const rows = readCms().page_sections.filter((s) => s.page_key === pageKey);
-  return mapEnabledSections(
+  const db = readCms();
+  const rows = db.page_sections.filter((s) => s.page_key === pageKey);
+  const out = mapEnabledSections(
     rows.map((s) => ({
       section_key: s.section_key,
       enabled: s.enabled,
@@ -151,6 +230,45 @@ export function cmsSections(pageKey: string): Record<string, Record<string, any>
       sort_order: s.sort_order,
     })),
   );
+
+  // ponytail: ensure homepage categories carousel includes any custom categories registered in catalog
+  if (pageKey === "home" && out.categories) {
+    const catSection = db.page_sections.find(
+      (s) => s.page_key === "catalog" && s.section_key === "categories",
+    );
+    const customCategories = catSection?.content?.customCategories;
+    if (Array.isArray(customCategories) && customCategories.length > 0) {
+      const items: any[] = Array.isArray(out.categories.items) ? [...out.categories.items] : [];
+      const seen = new Set(items.map((it: any) => String(it.name || "").trim().toUpperCase()));
+      let maxOrder = items.reduce((m: number, it: any) => Math.max(m, it.sort_order || 0), 0);
+
+      let added = false;
+      for (const c of customCategories) {
+        const name = typeof c === "string" ? c : c?.name;
+        if (!name) continue;
+        const norm = String(name).trim().toUpperCase();
+        if (!seen.has(norm)) {
+          seen.add(norm);
+          maxOrder += 1;
+          items.push({
+            name: norm,
+            subtitle: "Explore Collection",
+            image_url: "/categories/CORPORATE GIFTSETS.png",
+            bgColor: "#0F172A",
+            alt: norm,
+            href: `/shop?category=${encodeURIComponent(norm)}`,
+            sort_order: maxOrder,
+          });
+          added = true;
+        }
+      }
+      if (added) {
+        out.categories.items = items;
+      }
+    }
+  }
+
+  return out;
 }
 
 export function cmsSeo(pageKey: string): { title: string | null; description: string | null; ogImageUrl: string | null } | null {

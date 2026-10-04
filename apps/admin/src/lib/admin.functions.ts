@@ -26,6 +26,122 @@ export const updateSection = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    // ponytail: two-way sync for homepage category cards to catalog metadata & mega-menu
+    try {
+      const { data: currentSec } = await context.supabase
+        .from("page_sections")
+        .select("page_key, section_key")
+        .eq("id", data.id)
+        .maybeSingle();
+
+      const isHomeCat =
+        currentSec?.page_key === "home" && currentSec?.section_key === "categories";
+
+      if (isHomeCat && Array.isArray(data.content?.items)) {
+        const cardNames = (data.content.items as any[])
+          .map((it) => String(it?.name || "").trim().toUpperCase())
+          .filter(Boolean);
+
+        if (cardNames.length > 0) {
+          // 1. Sync new custom categories into catalog:categories
+          const { data: catSec } = await context.supabase
+            .from("page_sections")
+            .select("id, content")
+            .eq("page_key", "catalog")
+            .eq("section_key", "categories")
+            .maybeSingle();
+
+          const catContent = (catSec?.content || {}) as {
+            customCategories?: Array<{ name: string; seoTitle?: string; seoDescription?: string }>;
+            customSubcategories?: Record<string, string[]>;
+            categorySeo?: Record<string, any>;
+          };
+          const existingCustom = Array.isArray(catContent.customCategories)
+            ? [...catContent.customCategories]
+            : [];
+          const existingNames = new Set(existingCustom.map((c) => c.name.toUpperCase()));
+
+          let customAdded = false;
+          for (const name of cardNames) {
+            if (!existingNames.has(name)) {
+              existingNames.add(name);
+              existingCustom.push({ name });
+              customAdded = true;
+            }
+          }
+
+          if (customAdded) {
+            if (catSec?.id) {
+              await context.supabase
+                .from("page_sections")
+                .update({
+                  content: { ...catContent, customCategories: existingCustom },
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", catSec.id);
+            } else {
+              await context.supabase.from("page_sections").insert({
+                page_key: "catalog",
+                section_key: "categories",
+                title: "Catalog Categories",
+                sort_order: 0,
+                enabled: true,
+                content: { customCategories: existingCustom, customSubcategories: {}, categorySeo: {} },
+              });
+            }
+          }
+
+          // 2. Sync to site:mega_menu
+          const { data: megaSec } = await context.supabase
+            .from("page_sections")
+            .select("id, content")
+            .eq("page_key", "site")
+            .eq("section_key", "mega_menu")
+            .maybeSingle();
+
+          if (megaSec?.id) {
+            const megaContent = (megaSec.content || {}) as Record<string, any>;
+            const megaItems: any[] = Array.isArray(megaContent.items)
+              ? [...megaContent.items]
+              : [];
+            const megaNames = new Set(
+              megaItems.map((m: any) => String(m?.name || "").trim().toUpperCase())
+            );
+
+            let megaAdded = false;
+            for (const card of data.content.items) {
+              const name = String(card?.name || "").trim().toUpperCase();
+              if (name && !megaNames.has(name)) {
+                megaNames.add(name);
+                megaItems.push({
+                  name,
+                  subtitle: card.subtitle || "Explore Collection",
+                  image_url: card.image_url || "/categories/CORPORATE GIFTSETS.png",
+                  href: card.href || `/shop?category=${encodeURIComponent(name)}`,
+                  sort_order: megaItems.length + 1,
+                  enabled: true,
+                });
+                megaAdded = true;
+              }
+            }
+
+            if (megaAdded) {
+              await context.supabase
+                .from("page_sections")
+                .update({
+                  content: { ...megaContent, items: megaItems },
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", megaSec.id);
+            }
+          }
+        }
+      }
+    } catch (syncErr) {
+      console.error("Failed to sync homepage categories to catalog/mega-menu", syncErr);
+    }
+
     await notifyStorefront(["/", "/shop"]);
     return { ok: true };
   });
@@ -445,6 +561,111 @@ export const saveCatalogMetadata = createServerFn({ method: "POST" })
       });
       if (error) throw new Error(error.message);
     }
+
+    // ponytail: two-way sync from catalog metadata to home:categories & site:mega_menu
+    try {
+      const customCats = data.customCategories || [];
+      if (customCats.length > 0) {
+        // 1. Sync to home:categories
+        const { data: homeCatSection } = await context.supabase
+          .from("page_sections")
+          .select("id, content")
+          .eq("page_key", "home")
+          .eq("section_key", "categories")
+          .maybeSingle();
+
+        if (homeCatSection?.id) {
+          const homeContent = (homeCatSection.content || {}) as Record<string, any>;
+          const homeItems: any[] = Array.isArray(homeContent.items)
+            ? [...homeContent.items]
+            : [];
+          const homeNames = new Set(
+            homeItems.map((it: any) => String(it?.name || "").trim().toUpperCase())
+          );
+          let homeAdded = false;
+          let maxOrder = homeItems.reduce(
+            (m, it) => Math.max(m, typeof it?.sort_order === "number" ? it.sort_order : 0),
+            0
+          );
+
+          for (const c of customCats) {
+            const norm = c.name.trim().toUpperCase();
+            if (norm && !homeNames.has(norm)) {
+              homeNames.add(norm);
+              maxOrder += 1;
+              homeItems.push({
+                name: norm,
+                subtitle: "Explore Collection",
+                image_url: "/categories/CORPORATE GIFTSETS.png",
+                bgColor: "#0F172A",
+                alt: norm,
+                href: "",
+                sort_order: maxOrder,
+              });
+              homeAdded = true;
+            }
+          }
+
+          if (homeAdded) {
+            await context.supabase
+              .from("page_sections")
+              .update({
+                content: { ...homeContent, items: homeItems },
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", homeCatSection.id);
+          }
+        }
+
+        // 2. Sync to site:mega_menu
+        const { data: megaSec } = await context.supabase
+          .from("page_sections")
+          .select("id, content")
+          .eq("page_key", "site")
+          .eq("section_key", "mega_menu")
+          .maybeSingle();
+
+        if (megaSec?.id) {
+          const megaContent = (megaSec.content || {}) as Record<string, any>;
+          const megaItems: any[] = Array.isArray(megaContent.items)
+            ? [...megaContent.items]
+            : [];
+          const megaNames = new Set(
+            megaItems.map((m: any) => String(m?.name || "").trim().toUpperCase())
+          );
+          let megaAdded = false;
+
+          for (const c of customCats) {
+            const norm = c.name.trim().toUpperCase();
+            if (norm && !megaNames.has(norm)) {
+              megaNames.add(norm);
+              megaItems.push({
+                name: norm,
+                subtitle: "Explore Collection",
+                image_url: "/categories/CORPORATE GIFTSETS.png",
+                href: "",
+                sort_order: megaItems.length + 1,
+                enabled: true,
+              });
+              megaAdded = true;
+            }
+          }
+
+          if (megaAdded) {
+            await context.supabase
+              .from("page_sections")
+              .update({
+                content: { ...megaContent, items: megaItems },
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", megaSec.id);
+          }
+        }
+      }
+    } catch (syncErr) {
+      console.error("Failed to sync catalog categories to home/mega-menu", syncErr);
+    }
+
     await notifyStorefront(["/", "/shop"]);
     return { ok: true };
   });

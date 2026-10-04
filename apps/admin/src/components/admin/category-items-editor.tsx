@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -101,10 +103,66 @@ export function CategoryItemsEditor({
   value: CategoryCarouselItem[];
   onChange: (next: CategoryCarouselItem[]) => void;
 }) {
+  const { data: dbCategories = [] } = useQuery<string[]>({
+    queryKey: ["all-categories-for-editor"],
+    queryFn: async () => {
+      const [metaRes, prodRes, diaryRes] = await Promise.all([
+        supabase
+          .from("page_sections")
+          .select("content")
+          .eq("page_key", "catalog")
+          .eq("section_key", "categories")
+          .maybeSingle(),
+        supabase.from("products").select("category"),
+        supabase.from("diaries").select("category"),
+      ]);
+
+      const set = new Set<string>();
+      const customCats = (metaRes.data?.content as any)?.customCategories;
+      if (Array.isArray(customCats)) {
+        for (const c of customCats) {
+          const name = (typeof c === "string" ? c : c?.name || "").trim().toUpperCase();
+          if (name) set.add(name);
+        }
+      }
+
+      for (const p of prodRes.data || []) {
+        if (p.category) {
+          p.category.split(",").forEach((c: string) => {
+            const clean = c.trim().toUpperCase();
+            if (clean) set.add(clean);
+          });
+        }
+      }
+
+      for (const d of diaryRes.data || []) {
+        if (d.category) {
+          d.category.split(",").forEach((c: string) => {
+            const clean = c.trim().toUpperCase();
+            if (clean) set.add(clean);
+          });
+        }
+      }
+
+      for (const name of loadCustomCategoryNames()) {
+        const clean = name.trim().toUpperCase();
+        if (clean) set.add(clean);
+      }
+
+      return Array.from(set);
+    },
+    staleTime: 10_000,
+  });
+
   const categoryOptions = useMemo(() => {
-    const custom = loadCustomCategoryNames();
-    return Array.from(new Set([...STOREFRONT_CATEGORY_OPTIONS, ...custom, ...value.map((v) => v.name).filter(Boolean)]));
-  }, [value]);
+    const combined = new Set<string>();
+    for (const opt of STOREFRONT_CATEGORY_OPTIONS) combined.add(opt);
+    for (const cat of dbCategories) combined.add(cat);
+    for (const v of value) {
+      if (v.name && v.name.trim()) combined.add(v.name.trim().toUpperCase());
+    }
+    return Array.from(combined);
+  }, [dbCategories, value]);
 
   const sorted = useMemo(
     () =>
@@ -224,28 +282,42 @@ export function CategoryItemsEditor({
 
               <div>
                 <Label className="text-xs mb-1.5 block">Category name</Label>
-                <Select
-                  value={item.name || undefined}
-                  onValueChange={(name) =>
-                    updateAt(i, {
-                      name,
-                      alt: item.alt || name,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pick a category…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoryOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>
-                        {opt}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Input
+                    value={item.name}
+                    onChange={(e) => {
+                      const val = e.target.value.toUpperCase();
+                      updateAt(i, {
+                        name: val,
+                        alt: item.alt || val,
+                      });
+                    }}
+                    placeholder="Type name (e.g. TEST) or choose →"
+                    className="flex-1 text-sm font-semibold"
+                  />
+                  <Select
+                    value={categoryOptions.includes(item.name) ? item.name : undefined}
+                    onValueChange={(name) =>
+                      updateAt(i, {
+                        name,
+                        alt: item.alt || name,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="w-[130px] shrink-0 text-xs">
+                      <SelectValue placeholder="Choose…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categoryOptions.map((opt) => (
+                        <SelectItem key={opt} value={opt}>
+                          {opt}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  From the catalog category list (Categories page + custom).
+                  Type any new category name, or pick from existing catalog categories.
                 </p>
               </div>
 

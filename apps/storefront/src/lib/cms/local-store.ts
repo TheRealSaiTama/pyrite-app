@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import bundledSeed from "../../../data/cms-local.json";
 import { getLocalCatalog } from "@/lib/local-catalog";
 
 export type CmsRow = Record<string, any>;
@@ -243,6 +244,7 @@ function buildSeed(): CmsDb {
           { name: "CUSTOMISED DIARY & NOTE BOOKS", subtitle: "150+ Designs Available", image_url: "/categories/PROMOTIONAL DIARIES AND NOTEBOOKS.jpg", bgColor: "#1e3a5f", alt: "Custom diaries", href: "", sort_order: 10 },
           { name: "CALENDARS", subtitle: "Desktop & Wall Options", image_url: "/categories/CALENDARS.png", bgColor: "#28966E", alt: "Calendars", href: "", sort_order: 11 },
           { name: "EXHIBITION VISITOR'S GIFT IDEAS", subtitle: "Trade Show Specials", image_url: "/categories/EXHIBITION GIVEAWAY IDEAS.png", bgColor: "#0F172A", alt: "Exhibition gifts", href: "", sort_order: 12 },
+          { name: "TEST", subtitle: "Explore Collection", image_url: "/categories/CORPORATE GIFTSETS.png", bgColor: "#0F172A", alt: "Test category", href: "/shop?category=TEST", sort_order: 13 },
         ],
       }),
       section("home", "best_deals", "Latest Diaries Section", 50, {
@@ -304,7 +306,13 @@ function buildSeed(): CmsDb {
           { name: "CUSTOMISED DIARY & NOTE BOOKS", subtitle: "Personalized Products", image_url: "/categories/PROMOTIONAL DIARIES AND NOTEBOOKS.jpg", href: "", sort_order: 10, enabled: true },
           { name: "CALENDARS", subtitle: "Yearly Planners", image_url: "/categories/CALENDARS.png", href: "", sort_order: 11, enabled: true },
           { name: "EXHIBITION VISITOR'S GIFT IDEAS", subtitle: "Event Specials", image_url: "/categories/EXHIBITION GIVEAWAY IDEAS.png", href: "", sort_order: 12, enabled: true },
+          { name: "TEST", subtitle: "Explore Collection", image_url: "/categories/CORPORATE GIFTSETS.png", href: "/shop?category=TEST", sort_order: 13, enabled: true },
         ],
+      }),
+      section("catalog", "categories", "Catalog Categories", 0, {
+        customCategories: [{ name: "TEST" }],
+        customSubcategories: {},
+        categorySeo: {},
       }),
       section("shop", "main", "Shop page", 10, {
         heading: "Our Products",
@@ -471,10 +479,17 @@ export function readCms(): CmsDb {
   }
 
   if (cache) return cache;
-  cache = buildSeed();
-  sanitizeMediaAssets(cache);
-  writeCms(cache);
-  return cache;
+  try {
+    cache = JSON.parse(JSON.stringify(bundledSeed)) as CmsDb;
+    sanitizeMediaAssets(cache);
+    writeCms(cache);
+    return cache;
+  } catch {
+    cache = buildSeed();
+    sanitizeMediaAssets(cache);
+    writeCms(cache);
+    return cache;
+  }
 }
 
 export function writeCms(db: CmsDb) {

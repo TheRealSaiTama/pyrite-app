@@ -312,3 +312,24 @@ describe("Category deletion and stripping logic", () => {
     assert.equal(stripped, "WOODEN GIFTS, LUXURY PENS");
   });
 });
+
+describe("Category sync across navbar mega-menu and homepage carousel", () => {
+  it("cmsMegaMenu includes categories from home:categories, catalog:categories, and products", async () => {
+    const { cmsMegaMenu } = await import("./load");
+    const mega = cmsMegaMenu();
+    assert.ok(mega.length > 0, "MegaMenu should return categories");
+    const testItem = mega.find((c) => c.name.toUpperCase() === "TEST");
+    assert.ok(testItem, "TEST category must be present in megaMenu");
+    assert.equal(testItem.href, "/shop?category=TEST");
+  });
+
+  it("cmsSections('home') includes categories from home:categories and catalog:categories", async () => {
+    const { cmsSections } = await import("./load");
+    const sections = cmsSections("home");
+    assert.ok(sections.categories, "Home sections must include categories");
+    assert.ok(Array.isArray(sections.categories.items), "categories.items must be an array");
+    const testCat = sections.categories.items.find((c: any) => c.name.toUpperCase() === "TEST");
+    assert.ok(testCat, "TEST category must be present in home categories items");
+    assert.equal(testCat.name, "TEST");
+  });
+});

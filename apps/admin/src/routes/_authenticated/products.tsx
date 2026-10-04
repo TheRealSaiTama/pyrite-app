@@ -294,46 +294,97 @@ function ProductsPage() {
   const { data: catalogMeta } = useQuery({
     queryKey: ["catalog-categories-metadata"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("page_sections")
-        .select("content")
-        .eq("page_key", "catalog")
-        .eq("section_key", "categories")
-        .maybeSingle();
-      if (error || !data?.content) return null;
-      return data.content as {
+      const [catRes, homeRes, megaRes] = await Promise.all([
+        supabase
+          .from("page_sections")
+          .select("content")
+          .eq("page_key", "catalog")
+          .eq("section_key", "categories")
+          .maybeSingle(),
+        supabase
+          .from("page_sections")
+          .select("content")
+          .eq("page_key", "home")
+          .eq("section_key", "categories")
+          .maybeSingle(),
+        supabase
+          .from("page_sections")
+          .select("content")
+          .eq("page_key", "site")
+          .eq("section_key", "mega_menu")
+          .maybeSingle(),
+      ]);
+
+      const catContent = (catRes.data?.content || {}) as {
         customCategories?: CustomCategory[];
         customSubcategories?: Record<string, string[]>;
         categorySeo?: Record<string, CategorySeo>;
+      };
+
+      const homeContent = homeRes.data?.content as Record<string, any> | undefined;
+      const megaContent = megaRes.data?.content as Record<string, any> | undefined;
+      const homeItems = Array.isArray(homeContent?.items) ? homeContent.items : [];
+      const megaItems = Array.isArray(megaContent?.items) ? megaContent.items : [];
+
+      const cats: CustomCategory[] = Array.isArray(catContent.customCategories)
+        ? [...catContent.customCategories]
+        : [];
+      const knownNames = new Set(cats.map((c) => c.name.toUpperCase()));
+
+      for (const item of homeItems) {
+        if (item.name && typeof item.name === "string") {
+          const norm = item.name.trim().toUpperCase();
+          if (norm && !knownNames.has(norm)) {
+            knownNames.add(norm);
+            cats.push({ name: norm });
+          }
+        }
+      }
+
+      for (const item of megaItems) {
+        if (item.name && typeof item.name === "string") {
+          const norm = item.name.trim().toUpperCase();
+          if (norm && !knownNames.has(norm)) {
+            knownNames.add(norm);
+            cats.push({ name: norm });
+          }
+        }
+      }
+
+      return {
+        customCategories: cats,
+        customSubcategories: catContent.customSubcategories || {},
+        categorySeo: catContent.categorySeo || {},
       };
     },
   });
 
   useEffect(() => {
     if (!catalogMeta) return;
-    if (Array.isArray(catalogMeta.customCategories) && catalogMeta.customCategories.length > 0) {
+    if (Array.isArray(catalogMeta.customCategories)) {
       setCustomCategories((prev) => {
-        const names = new Set(prev.map((c) => c.name.toUpperCase()));
-        const merged = [...prev];
-        for (const c of catalogMeta.customCategories!) {
-          if (c && c.name && !names.has(c.name.toUpperCase())) {
-            names.add(c.name.toUpperCase());
-            merged.push(c);
+        const map = new Map<string, CustomCategory>();
+        for (const c of catalogMeta.customCategories || []) {
+          if (c && c.name) map.set(c.name.toUpperCase(), c);
+        }
+        for (const p of prev) {
+          if (p && p.name && !map.has(p.name.toUpperCase())) {
+            map.set(p.name.toUpperCase(), p);
           }
         }
-        return merged;
+        return Array.from(map.values());
       });
     }
     if (catalogMeta.customSubcategories) {
       setCustomSubcategories((prev) => ({
-        ...catalogMeta.customSubcategories,
         ...prev,
+        ...catalogMeta.customSubcategories,
       }));
     }
     if (catalogMeta.categorySeo) {
       setCategorySeo((prev) => ({
-        ...catalogMeta.categorySeo,
         ...prev,
+        ...catalogMeta.categorySeo,
       }));
     }
   }, [catalogMeta]);
@@ -364,6 +415,8 @@ function ProductsPage() {
         },
       });
       qc.invalidateQueries({ queryKey: ["catalog-categories-metadata"] });
+      qc.invalidateQueries({ queryKey: ["all-categories-for-editor"] });
+      qc.invalidateQueries({ queryKey: ["sections"] });
     } catch (e) {
       console.error("Failed to persist catalog metadata to server", e);
     }

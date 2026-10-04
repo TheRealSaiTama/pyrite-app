@@ -104,7 +104,18 @@ describe("Catalog End-to-End Persistence & Renaming Workflow", () => {
         (s) => s.page_key === "catalog" && s.section_key === "categories"
       );
       if (idx >= 0) {
-        db.page_sections[idx].content = customMetadata;
+        const existing = db.page_sections[idx].content || {};
+        const mergedCategories = [
+          ...customMetadata.customCategories,
+          ...(Array.isArray(existing.customCategories) ? existing.customCategories.filter((c: any) => c.name !== testCatOriginal) : []),
+        ];
+        db.page_sections[idx].content = {
+          ...existing,
+          ...customMetadata,
+          customCategories: mergedCategories,
+          customSubcategories: { ...(existing.customSubcategories || {}), ...customMetadata.customSubcategories },
+          categorySeo: { ...(existing.categorySeo || {}), ...customMetadata.categorySeo },
+        };
       } else {
         db.page_sections.push({
           id: "cat-meta-e2e",

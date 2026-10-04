@@ -206,12 +206,6 @@ export default function ShopClient({
     empty_state?: string;
   };
 }) {
-  const heading = filters.search
-    ? `Search results for "${filters.search}"`
-    : chrome?.heading?.trim() || "Our Products";
-  const emptyState =
-    chrome?.empty_state?.trim() ||
-    "No products match your filters. Try clearing filters.";
   const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState<Filters>({
@@ -224,6 +218,13 @@ export default function ShopClient({
     sortBy: 'price',
     sortOrder: 'asc',
   });
+
+  const heading = filters.search
+    ? `Search results for "${filters.search}"`
+    : chrome?.heading?.trim() || "Our Products";
+  const emptyState =
+    chrome?.empty_state?.trim() ||
+    "No products match your filters. Try clearing filters.";
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categorySearchQuery, setCategorySearchQuery] = useState("");

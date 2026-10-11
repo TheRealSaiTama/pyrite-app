@@ -141,6 +141,17 @@ export function getSubcategory(
     if (explicitMatch) return explicitMatch;
   }
 
+  if (customSubcategories) {
+    for (const [k, subs] of Object.entries(customSubcategories)) {
+      if (matchCategory(category, k)) {
+        const match = subs.find((sub) =>
+          itemTags.some((t) => t.toLowerCase() === sub.toLowerCase())
+        );
+        if (match) return match;
+      }
+    }
+  }
+
   const nameLower = (item.name || "").toLowerCase();
   const tagsLower = itemTags.map((t) => t.toLowerCase());
 
@@ -223,6 +234,20 @@ export function getSubcategory(
     categoryNorm === "EXHIBITION GIFTS"
   ) {
     return "Giveaways & Promos";
+  }
+
+  if (itemTags.length > 0) {
+    const genericTags = new Set([
+      "best corporate gift",
+      "best gifting ideas",
+      "customized diary with pen",
+      "diary and calendar gift set",
+      "diary and pen set",
+      "diary with pen",
+      "diary and pen combo",
+    ]);
+    const specificTag = itemTags.find((t) => t && !genericTags.has(t.toLowerCase()));
+    if (specificTag) return specificTag;
   }
 
   return "General / Others";

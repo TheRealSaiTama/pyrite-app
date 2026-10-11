@@ -240,7 +240,7 @@ const Categories = ({ content }: { content?: any }) => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.2 }}
                 transition={{ duration: 0.5, delay: index * 0.05 }}
-                className="w-[260px] sm:w-[280px] flex-shrink-0 snap-start"
+                className="w-[220px] sm:w-[280px] flex-shrink-0 snap-start"
               >
                 <Link
                   href={
@@ -250,7 +250,7 @@ const Categories = ({ content }: { content?: any }) => {
                   }
                   className="block group"
                 >
-                  <div className="relative h-[340px] rounded-3xl overflow-hidden bg-slate-900 border border-slate-200/80 shadow-sm transition-all duration-500 ease-out group-hover:shadow-2xl group-hover:-translate-y-1.5">
+                  <div className="relative h-[290px] sm:h-[340px] rounded-2xl sm:rounded-3xl overflow-hidden bg-slate-900 border border-slate-200/80 shadow-sm transition-all duration-500 ease-out group-hover:shadow-2xl group-hover:-translate-y-1.5">
                     {category.image_url &&
                     (category.image_url.startsWith("http") || category.image_url.startsWith("/")) ? (
                       <Image
@@ -258,7 +258,7 @@ const Categories = ({ content }: { content?: any }) => {
                         alt={category.alt || category.name}
                         fill
                         unoptimized={isRemoteOrDataImage(category.image_url)}
-                        sizes="(max-width: 640px) 280px, 300px"
+                        sizes="(max-width: 640px) 240px, 300px"
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-108 opacity-90 group-hover:opacity-100"
                       />
                     ) : null}
@@ -267,15 +267,15 @@ const Categories = ({ content }: { content?: any }) => {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent transition-opacity duration-300" />
                     
                     {/* Top Badge */}
-                    <div className="absolute top-4 left-4 z-10">
-                      <span className="text-[10px] font-semibold tracking-wide uppercase bg-white/90 backdrop-blur-md text-slate-900 px-3 py-1 rounded-full shadow-xs">
+                    <div className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 z-10">
+                      <span className="text-[9px] sm:text-[10px] font-semibold tracking-wide uppercase bg-white/90 backdrop-blur-md text-slate-900 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-xs">
                         {category.subtitle || "Premium Gifting"}
                       </span>
                     </div>
 
                     {/* Bottom Content Info */}
-                    <div className="absolute bottom-0 left-0 right-0 p-6 z-10 text-white">
-                      <h3 className="font-extrabold text-lg text-white leading-snug drop-shadow-sm group-hover:text-slate-100 transition-colors">
+                    <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 z-10 text-white">
+                      <h3 className="font-extrabold text-base sm:text-lg text-white leading-snug drop-shadow-sm group-hover:text-slate-100 transition-colors">
                         {category.name}
                       </h3>
                       <div className="mt-3 flex items-center justify-between text-xs text-slate-300 font-medium">

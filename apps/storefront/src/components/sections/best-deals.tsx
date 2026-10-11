@@ -72,32 +72,32 @@ const ProductCard = ({ product }: { product: Product }) => {
     : 'Price on request';
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 relative">
+    <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col group transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 relative">
       <Link href={`/shop/${product.id}`} className="block flex-1 flex flex-col">
         {/* Product Image Container */}
-        <div className="relative bg-slate-50/70 aspect-[4/3] overflow-hidden p-6 block">
+        <div className="relative bg-slate-50/70 aspect-square sm:aspect-[4/3] overflow-hidden p-3 sm:p-6 block">
           <Image
             src={imgSrc}
             alt={product.name}
             fill
             unoptimized={imgSrc.startsWith("data:")}
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-            className="object-contain p-4 transition-transform duration-500 group-hover:scale-108"
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 50vw"
+            className="object-contain p-2 sm:p-4 transition-transform duration-500 group-hover:scale-108"
             onError={() => {
               if (imgSrc !== PRODUCT_IMAGE_PLACEHOLDER) {
                 setImgSrc(PRODUCT_IMAGE_PLACEHOLDER);
               }
             }}
           />
-          <span className="absolute top-3.5 right-3.5 bg-white/90 backdrop-blur-md rounded-full p-2 shadow-xs border border-slate-100 transition-all duration-300 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0">
-            <Image src={heartIconUrl} alt="Wishlist" width={15} height={15} unoptimized />
+          <span className="absolute top-2.5 right-2.5 sm:top-3.5 sm:right-3.5 bg-white/90 backdrop-blur-md rounded-full p-1.5 sm:p-2 shadow-xs border border-slate-100 transition-all duration-300 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0">
+            <Image src={heartIconUrl} alt="Wishlist" width={14} height={14} unoptimized />
           </span>
         </div>
 
         {/* Card Info Content */}
-        <div className="p-5 sm:p-6 flex flex-col flex-grow justify-between">
+        <div className="p-3 sm:p-6 flex flex-col flex-grow justify-between">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="hidden sm:flex items-center justify-between gap-2 mb-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
                 Custom Logo
               </span>
@@ -107,23 +107,36 @@ const ProductCard = ({ product }: { product: Product }) => {
               </div>
             </div>
 
-            <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-snug line-clamp-2 mb-2 group-hover:text-slate-700 transition-colors">
+            <h3 className="text-xs sm:text-base font-bold text-slate-900 leading-snug line-clamp-2 mb-1.5 sm:mb-2 group-hover:text-slate-700 transition-colors">
               {product.name}
             </h3>
 
-            <p className="text-xs text-slate-500 line-clamp-2 mb-4 leading-relaxed">
+            <p className="hidden sm:block text-xs text-slate-500 line-clamp-2 mb-4 leading-relaxed">
               {product.description || "Premium handcrafted executive finish with custom branding."}
             </p>
           </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between mt-auto">
+          <div className="pt-2 sm:pt-3 border-t border-slate-100 flex items-center justify-between mt-auto">
             <div>
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Price</span>
-              <p className="text-base sm:text-lg font-extrabold text-slate-900">
-                {priceString}
-              </p>
+              <div className="text-[10px] sm:text-xs text-slate-600 flex flex-wrap items-baseline gap-1">
+                <span>As low as</span>
+                {typeof product.minPrice === 'number' && product.minPrice !== null ? (
+                  <>
+                    {typeof product.maxPrice === 'number' && product.maxPrice > product.minPrice && (
+                      <span className="line-through text-slate-400 text-[10px] sm:text-xs">
+                        ₹{product.maxPrice.toLocaleString()}
+                      </span>
+                    )}
+                    <span className="text-red-600 font-bold text-xs sm:text-base">
+                      ₹{product.minPrice.toLocaleString()}
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-bold text-slate-900 text-xs sm:text-base">{priceString}</span>
+                )}
+              </div>
             </div>
-            <span className="text-xs font-semibold text-slate-500 group-hover:text-[#0F172A] transition-colors flex items-center gap-1">
+            <span className="text-xs font-semibold text-slate-500 group-hover:text-[#0F172A] transition-colors hidden sm:flex items-center gap-1">
               View →
             </span>
           </div>
@@ -192,7 +205,7 @@ const BestDealsSection = ({ content, products: dbProducts }: BestDealsSectionPro
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {items.map((product, index) => (
             <ProductCard key={product.id || index} product={product} />
           ))}

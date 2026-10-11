@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ChevronDown,
+  ChevronRight,
   Menu,
   Search,
   Heart,
@@ -11,6 +12,7 @@ import {
   X,
   Phone,
   Mail,
+  User,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -70,6 +72,7 @@ const Header = ({
   const telPhone = displayPhone.replace(/\s+/g, "");
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [mobileOpenSection, setMobileOpenSection] = React.useState<string | null>("category");
   const { cartCount, favourites } = useCart();
   const router = useRouter();
 
@@ -340,11 +343,11 @@ const Header = ({
           </div>
 
           {/* Right Actions: Favourites and Add to Cart */}
-          <div className="flex items-center gap-4 sm:gap-7 shrink-0">
-            {/* Favourites Button */}
+          <div className="flex items-center gap-2 sm:gap-7 shrink-0">
+            {/* Favourites Button (Desktop) */}
             <Link
               href="/favourites"
-              className="flex flex-col items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors group relative px-1 py-0.5 cursor-pointer"
+              className="hidden md:flex flex-col items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors group relative px-1 py-0.5 cursor-pointer"
               title="View Favourites"
             >
               <div className="relative">
@@ -355,15 +358,15 @@ const Header = ({
                   </span>
                 )}
               </div>
-              <span className="text-xs font-medium text-slate-600 group-hover:text-[#0F172A] mt-1 hidden sm:inline">
+              <span className="text-xs font-medium text-slate-600 group-hover:text-[#0F172A] mt-1">
                 Favourites
               </span>
             </Link>
 
-            {/* Cart Button */}
+            {/* Cart Button (Desktop) */}
             <Link
               href="/cart"
-              className="flex flex-col items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors group relative px-1 py-0.5 cursor-pointer"
+              className="hidden md:flex flex-col items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors group relative px-1 py-0.5 cursor-pointer"
               aria-label="View Shopping Cart"
               title="View Cart"
             >
@@ -375,94 +378,135 @@ const Header = ({
                   </span>
                 )}
               </div>
-              <span className="text-xs font-medium text-slate-600 group-hover:text-[#0F172A] mt-1 whitespace-nowrap hidden sm:inline">
+              <span className="text-xs font-medium text-slate-600 group-hover:text-[#0F172A] mt-1 whitespace-nowrap">
                 Cart
               </span>
             </Link>
 
-            {/* Mobile Menu Toggle Button */}
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-1.5 text-slate-700 hover:text-[#0F172A] rounded-lg transition-colors cursor-pointer"
-              aria-label="Toggle navigation menu"
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            {/* Mobile Actions: Phone, User, Cart matching reference screenshot */}
+            <div className="flex md:hidden items-center gap-2">
+              <a
+                href={`tel:${telPhone}`}
+                className="w-9 h-9 rounded-full border border-slate-300 flex items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors"
+                aria-label="Call Us"
+                title="Call Us"
+              >
+                <Phone className="w-4 h-4" />
+              </a>
+
+              <Link
+                href="/favourites"
+                className="w-9 h-9 rounded-full border border-slate-300 flex items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors relative"
+                aria-label="Favourites"
+                title="Favourites"
+              >
+                <User className="w-4 h-4" />
+                {favourites.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-bold h-4 w-4 rounded-full flex items-center justify-center shadow-xs">
+                    {favourites.length}
+                  </span>
+                )}
+              </Link>
+
+              <Link
+                href="/cart"
+                className="w-9 h-9 rounded-full border border-slate-300 flex items-center justify-center text-slate-700 hover:text-[#0F172A] transition-colors relative"
+                aria-label="Shopping Cart"
+                title="Cart"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#0F172A] text-white text-[9px] font-bold h-4 w-4 rounded-full flex items-center justify-center shadow-xs">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* Mobile Search Bar (under logo on small screens) */}
-        <div className="md:hidden px-4 pb-3 pt-1">
-          <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+        {/* Mobile Search Bar + Menu Toggle (Aligned with reference screenshot) */}
+        <div className="md:hidden px-3.5 py-2.5 bg-[#0F172A] flex items-center gap-2.5">
+          <form onSubmit={handleSearchSubmit} className="relative flex-1">
             <Input
               type="search"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
-              placeholder="Search diaries, gifts..."
-              className="w-full h-10 pl-3 pr-10 rounded-lg border-slate-200 bg-slate-50 text-xs"
+              placeholder="Search"
+              className="w-full h-10 pl-4 pr-10 rounded-full border border-slate-700 bg-slate-900/90 text-white placeholder:text-slate-400 text-xs focus:bg-slate-900 focus:border-slate-500"
               aria-label="Search diaries and gifts"
             />
             <button
               type="submit"
-              className="absolute right-1 top-1/2 -translate-y-1/2 bg-[#0F172A] text-white p-1.5 rounded-md"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
               aria-label="Search"
             >
               <Search className="w-4 h-4" />
             </button>
           </form>
 
-          {/* Mobile search results dropdown */}
-          {isSearchOpen &&
-            (searchLoading || searchResults.length > 0 || searchTerm.trim().length > 0) && (
-              <div
-                className="mt-2 rounded-lg border border-slate-100 bg-white shadow-lg overflow-hidden"
-                onMouseDown={(event) => event.preventDefault()}
-              >
-                <div className="max-h-60 overflow-y-auto">
-                  {searchLoading && (
-                    <div className="py-4 text-center text-xs text-slate-500">Searching…</div>
-                  )}
-                  {!searchLoading &&
-                    searchResults.length === 0 &&
-                    searchTerm.trim().length > 0 && (
-                      <div className="py-4 text-center text-xs text-slate-500">
-                        No products found
-                      </div>
-                    )}
-                  {!searchLoading &&
-                    searchResults.map((item) => (
-                      <button
-                        key={`m-${item.source}-${item.id}`}
-                        type="button"
-                        onClick={() => handleResultSelect(item)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50 border-b border-slate-50 last:border-0"
-                      >
-                        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded bg-slate-100">
-                          <Image
-                            src={item.imageUrl || "/file.svg"}
-                            alt={item.name}
-                            fill
-                            unoptimized={isRemoteOrDataImage(item.imageUrl || "")}
-                            className="object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="truncate text-xs font-semibold text-slate-900">
-                            {item.name}
-                          </p>
-                          <p className="text-[11px] text-slate-500 font-medium">
-                            {formatPriceLabel(item)}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                </div>
-              </div>
-            )}
+          {/* Menu Button Toggle: "Menu ✕" or "Menu ☰" */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="flex items-center gap-1.5 text-white font-bold text-sm tracking-wide px-2 py-1.5 hover:text-slate-200 cursor-pointer shrink-0"
+            aria-label="Toggle navigation menu"
+          >
+            <span>Menu</span>
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
+
+        {/* Mobile search results dropdown */}
+        {isSearchOpen &&
+          (searchLoading || searchResults.length > 0 || searchTerm.trim().length > 0) && (
+            <div
+              className="md:hidden border-b border-slate-100 bg-white shadow-xl overflow-hidden px-3 py-2 z-50"
+              onMouseDown={(event) => event.preventDefault()}
+            >
+              <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
+                {searchLoading && (
+                  <div className="py-4 text-center text-xs text-slate-500">Searching…</div>
+                )}
+                {!searchLoading &&
+                  searchResults.length === 0 &&
+                  searchTerm.trim().length > 0 && (
+                    <div className="py-4 text-center text-xs text-slate-500">
+                      No products found
+                    </div>
+                  )}
+                {!searchLoading &&
+                  searchResults.map((item) => (
+                    <button
+                      key={`m-${item.source}-${item.id}`}
+                      type="button"
+                      onClick={() => handleResultSelect(item)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-slate-50"
+                    >
+                      <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded bg-slate-100">
+                        <Image
+                          src={item.imageUrl || "/file.svg"}
+                          alt={item.name}
+                          fill
+                          unoptimized={isRemoteOrDataImage(item.imageUrl || "")}
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate text-xs font-semibold text-slate-900">
+                          {item.name}
+                        </p>
+                        <p className="text-[11px] text-slate-500 font-medium">
+                          {formatPriceLabel(item)}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
       </div>
 
       {/* Row 2: Categories Button + Secondary Navigation Links */}
@@ -560,30 +604,202 @@ const Header = ({
         </div>
       </div>
 
-      {/* Mobile Menu Panel */}
+      {/* Mobile Menu Panel - Dark accordion matching reference screenshot */}
       {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-100 bg-white px-4 py-3 space-y-3 shadow-lg">
-          <div className="space-y-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-2">
-              Navigation
-            </p>
-            {navItems.map((item) => {
-              const isExt = item.href.startsWith("http://") || item.href.startsWith("https://") || item.href.startsWith("//");
-              if (isExt) {
-                return (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="block px-2 py-2 text-sm font-medium text-slate-800 hover:text-[#0F172A] hover:bg-slate-50 rounded-md transition-colors"
-                  >
-                    {item.label}
-                  </a>
-                );
-              }
-              return (
+        <div className="md:hidden bg-[#0F172A] text-white divide-y divide-slate-800 shadow-2xl border-t border-slate-800">
+          {/* 1. SHOP BY CATEGORY */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setMobileOpenSection(mobileOpenSection === "category" ? null : "category")}
+              className="w-full px-5 py-3.5 flex items-center justify-between text-left font-bold text-xs sm:text-sm uppercase tracking-wider text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
+            >
+              <span>SHOP BY CATEGORY</span>
+              <ChevronRight
+                className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                  mobileOpenSection === "category" ? "rotate-90 text-white" : ""
+                }`}
+              />
+            </button>
+            {mobileOpenSection === "category" && (
+              <div className="bg-[#0B132B] px-5 py-3 space-y-2 border-t border-slate-800/60 max-h-72 overflow-y-auto custom-scrollbar">
+                {categoriesToDisplay.map((cat) => (
+                  <div key={cat.name} className="py-1">
+                    <Link
+                      href={cat.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-xs font-semibold text-slate-200 hover:text-white block py-1"
+                    >
+                      {cat.name}
+                    </Link>
+                    {cat.subcategories && cat.subcategories.length > 0 && (
+                      <div className="pl-3 pt-0.5 flex flex-wrap gap-x-3 gap-y-1">
+                        {cat.subcategories.map((sub) => (
+                          <Link
+                            key={sub.name}
+                            href={sub.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="text-[11px] text-slate-400 hover:text-white py-0.5"
+                          >
+                            {sub.name}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 2. SHOP BY OCCASION */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setMobileOpenSection(mobileOpenSection === "occasion" ? null : "occasion")}
+              className="w-full px-5 py-3.5 flex items-center justify-between text-left font-bold text-xs sm:text-sm uppercase tracking-wider text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
+            >
+              <span>SHOP BY OCCASION</span>
+              <ChevronRight
+                className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                  mobileOpenSection === "occasion" ? "rotate-90 text-white" : ""
+                }`}
+              />
+            </button>
+            {mobileOpenSection === "occasion" && (
+              <div className="bg-[#0B132B] px-5 py-3 space-y-2.5 border-t border-slate-800/60">
+                <Link
+                  href="/shop?category=CORPORATE%20GIFT%20SETS"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  Corporate Events & Annual Meets
+                </Link>
+                <Link
+                  href="/shop?category=NEW%20YEAR%20DIARY"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  New Year & Festive Celebrations
+                </Link>
+                <Link
+                  href="/shop?category=EXHIBITION%20VISITOR'S%20GIFT%20IDEAS"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  Trade Shows & Exhibition Giveaways
+                </Link>
+                <Link
+                  href="/shop?category=LEATHER%20GIFT%20ITEMS"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  Client Appreciation & VIP Gifting
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* 3. SHOP BY OCCUPATION */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setMobileOpenSection(mobileOpenSection === "occupation" ? null : "occupation")}
+              className="w-full px-5 py-3.5 flex items-center justify-between text-left font-bold text-xs sm:text-sm uppercase tracking-wider text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
+            >
+              <span>SHOP BY OCCUPATION</span>
+              <ChevronRight
+                className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                  mobileOpenSection === "occupation" ? "rotate-90 text-white" : ""
+                }`}
+              />
+            </button>
+            {mobileOpenSection === "occupation" && (
+              <div className="bg-[#0B132B] px-5 py-3 space-y-2.5 border-t border-slate-800/60">
+                <Link
+                  href="/shop?category=LEATHER%20BAGS"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  Executive & Leadership
+                </Link>
+                <Link
+                  href="/shop?category=PEN%20STANDS"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  Desk & Administrative Professionals
+                </Link>
+                <Link
+                  href="/shop?category=POWER%20BANK%20DIARIES"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  Tech Professionals & Frequent Travelers
+                </Link>
+                <Link
+                  href="/shop?category=JUTE%20BAGS"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  Sustainable & Field Teams
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* 4. GREAT DEALS AND MORE */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setMobileOpenSection(mobileOpenSection === "deals" ? null : "deals")}
+              className="w-full px-5 py-3.5 flex items-center justify-between text-left font-bold text-xs sm:text-sm uppercase tracking-wider text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
+            >
+              <span>GREAT DEALS AND MORE</span>
+              <ChevronRight
+                className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+                  mobileOpenSection === "deals" ? "rotate-90 text-white" : ""
+                }`}
+              />
+            </button>
+            {mobileOpenSection === "deals" && (
+              <div className="bg-[#0B132B] px-5 py-3 space-y-2.5 border-t border-slate-800/60">
+                <Link
+                  href="/shop?sortBy=price&sortOrder=asc"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  Budget-Friendly Gifts (Under ₹200)
+                </Link>
+                <Link
+                  href="/bulk-orders"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  Bulk Orders & Factory Wholesale
+                </Link>
+                <Link
+                  href="/custom-design"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  Custom Logo Printing & Embossing Studio
+                </Link>
+                <Link
+                  href="/shop"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block text-xs font-medium text-slate-300 hover:text-white"
+                >
+                  Full Catalog
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Secondary links & Contact in dark footer */}
+          <div className="px-5 py-3.5 bg-[#080d1e] border-t border-slate-800/80">
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-slate-300 mb-3">
+              {navItems.map((item) => (
                 <Link
                   key={item.label}
                   href={item.href}
@@ -591,60 +807,28 @@ const Header = ({
                     setIsMobileMenuOpen(false);
                     if (item.href === "#about") handleContactClick(e);
                   }}
-                  className="block px-2 py-2 text-sm font-medium text-slate-800 hover:text-[#0F172A] hover:bg-slate-50 rounded-md transition-colors"
+                  className="hover:text-white transition-colors"
                 >
                   {item.label}
                 </Link>
-              );
-            })}
-          </div>
-          <div className="pt-2 border-t border-slate-100">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-2 mb-2">
-              Categories & Subcategories
-            </p>
-            <div className="space-y-2.5 max-h-72 overflow-y-auto px-2 pr-1 custom-scrollbar">
-              {categoriesToDisplay.map((cat) => (
-                <div key={cat.name} className="border-b border-slate-50 pb-2 last:border-0">
-                  <Link
-                    href={cat.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="text-xs font-bold uppercase tracking-wider text-slate-900 hover:text-amber-800 block py-1"
-                  >
-                    {cat.name}
-                  </Link>
-                  {cat.subcategories && cat.subcategories.length > 0 && (
-                    <div className="pl-2 pt-0.5 flex flex-wrap gap-x-3 gap-y-1">
-                      {cat.subcategories.map((sub) => (
-                        <Link
-                          key={sub.name}
-                          href={sub.href}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className="text-[11px] text-slate-500 hover:text-[#0F172A] py-0.5"
-                        >
-                          {sub.name}
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
               ))}
             </div>
-          </div>
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-around text-xs text-slate-600">
-            <a
-              href={`tel:${telPhone}`}
-              className="flex items-center gap-1.5 hover:text-[#0F172A] py-1"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>Call Us</span>
-            </a>
-            <a
-              href={`mailto:${displayEmail}`}
-              className="flex items-center gap-1.5 hover:text-[#0F172A] py-1"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              <span>Email Us</span>
-            </a>
+            <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400">
+              <a
+                href={`tel:${telPhone}`}
+                className="flex items-center gap-1.5 hover:text-white py-1"
+              >
+                <Phone className="w-3.5 h-3.5 text-slate-400" />
+                <span>Call Us</span>
+              </a>
+              <a
+                href={`mailto:${displayEmail}`}
+                className="flex items-center gap-1.5 hover:text-white py-1"
+              >
+                <Mail className="w-3.5 h-3.5 text-slate-400" />
+                <span>Email Us</span>
+              </a>
+            </div>
           </div>
         </div>
       )}

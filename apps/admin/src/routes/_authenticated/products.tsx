@@ -166,17 +166,43 @@ function matchCategory(productCat: string | null, targetCat: string): boolean {
   });
 }
 
-function getSubcategory(item: CatalogItem, category: string): string {
+function getSubcategory(
+  item: CatalogItem,
+  category: string,
+  customSubcategories?: Record<string, string[]>
+): string {
   const categoryNorm = category.trim().toUpperCase();
   
-  const predefined = STOREFRONT_SUBCATEGORIES[categoryNorm];
-  if (predefined) {
-    const explicitMatch = predefined.find(sub => (item.tags || []).includes(sub));
+  const predefined = Array.from(
+    new Set([
+      ...(STOREFRONT_SUBCATEGORIES[categoryNorm] || []),
+      ...(customSubcategories?.[categoryNorm] || []),
+      ...Object.entries(customSubcategories || {})
+        .filter(([k]) => matchCategory(k, categoryNorm))
+        .flatMap(([, v]) => v),
+    ])
+  );
+
+  const itemTags = (item.tags || []).map((t) => (typeof t === "string" ? t.trim() : ""));
+
+  if (predefined.length > 0) {
+    const explicitMatch = predefined.find((sub) =>
+      itemTags.some((t) => t.toLowerCase() === sub.toLowerCase())
+    );
     if (explicitMatch) return explicitMatch;
   }
 
+  if (customSubcategories) {
+    for (const subs of Object.values(customSubcategories)) {
+      const match = subs.find((sub) =>
+        itemTags.some((t) => t.toLowerCase() === sub.toLowerCase())
+      );
+      if (match) return match;
+    }
+  }
+
   const nameLower = item.name.toLowerCase();
-  const tagsLower = (item.tags || []).map((t) => t.toLowerCase());
+  const tagsLower = itemTags.map((t) => t.toLowerCase());
 
   const hasKeyword = (keywords: string[]) =>
     keywords.some((k) => {
@@ -237,6 +263,20 @@ function getSubcategory(item: CatalogItem, category: string): string {
 
   if (categoryNorm === "EXHIBITION VISITOR'S GIFT IDEAS") {
     return "Giveaways & Promos";
+  }
+
+  if (itemTags.length > 0) {
+    const genericTags = new Set([
+      "best corporate gift",
+      "best gifting ideas",
+      "customized diary with pen",
+      "diary and calendar gift set",
+      "diary and pen set",
+      "diary with pen",
+      "diary and pen combo",
+    ]);
+    const specificTag = itemTags.find((t) => t && !genericTags.has(t.toLowerCase()));
+    if (specificTag) return specificTag;
   }
 
   return "General / Others";

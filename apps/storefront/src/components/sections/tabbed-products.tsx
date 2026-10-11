@@ -31,42 +31,57 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, className }) => {
     : 'Price on request';
 
   return (
-    <div className={cn("bg-white rounded-2xl border border-slate-100 p-5 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col group relative", className)}>
+    <div className={cn("bg-white rounded-xl sm:rounded-2xl border border-slate-100 p-3 sm:p-5 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col group relative", className)}>
       <Link href={`/shop/${product.id}`} className="block flex-1 flex flex-col">
-        <div className="relative bg-slate-50 rounded-xl flex items-center justify-center p-5 mb-4 h-[220px] overflow-hidden product-image-container block">
+        <div className="relative bg-slate-50 rounded-xl flex items-center justify-center p-2 sm:p-5 mb-2.5 sm:mb-4 aspect-square sm:h-[220px] overflow-hidden product-image-container block">
           <Image
             src={imgSrc}
             alt={product.name}
             fill
             unoptimized={imgSrc.startsWith("data:")}
-            className="object-contain p-4 transition-transform duration-300 group-hover:scale-105"
-            sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 22vw"
+            className="object-contain p-2 sm:p-4 transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 45vw, 22vw"
             onError={() => {
               if (imgSrc !== PRODUCT_IMAGE_PLACEHOLDER) {
                 setImgSrc(PRODUCT_IMAGE_PLACEHOLDER);
               }
             }}
           />
-          <span className="absolute top-3 right-3 bg-white rounded-full w-8 h-8 flex items-center justify-center cursor-pointer shadow-xs z-10 transition-transform group-hover:scale-110">
+          <span className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3 bg-white rounded-full w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center cursor-pointer shadow-xs z-10 transition-transform group-hover:scale-110">
             <Image
               src="https://cdn.prod.website-files.com/63e857eaeaf853471d5335ff/63e9df775b939f51a0b22f6d_Icon.svg"
               alt="wishlist"
-              width={16}
-              height={16}
+              width={14}
+              height={14}
               unoptimized
             />
           </span>
         </div>
         <div className="flex flex-col flex-grow justify-between">
-          <h3 className="text-base font-bold text-slate-900 leading-snug group-hover:text-primary transition-colors line-clamp-2 mb-3">
+          <h3 className="text-xs sm:text-base font-bold text-slate-900 leading-snug group-hover:text-primary transition-colors line-clamp-2 mb-2 sm:mb-3">
             {product.name}
           </h3>
-          <div className="flex items-center justify-between pt-3 border-t border-slate-100 mt-auto">
+          <div className="flex items-center justify-between pt-2 sm:pt-3 border-t border-slate-100 mt-auto">
             <div>
-              <span className="text-[10px] uppercase font-semibold text-slate-400 block">Price</span>
-              <p className="text-base sm:text-lg font-extrabold text-slate-900">{priceLabel}</p>
+              <div className="text-[10px] sm:text-xs text-slate-600 flex flex-wrap items-baseline gap-1">
+                <span>As low as</span>
+                {typeof product.minPrice === 'number' && product.minPrice !== null ? (
+                  <>
+                    {typeof product.maxPrice === 'number' && product.maxPrice > product.minPrice && (
+                      <span className="line-through text-slate-400 text-[10px] sm:text-xs">
+                        ₹{product.maxPrice.toLocaleString()}
+                      </span>
+                    )}
+                    <span className="text-red-600 font-bold text-xs sm:text-base">
+                      ₹{product.minPrice.toLocaleString()}
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-bold text-slate-900 text-xs sm:text-base">{priceLabel}</span>
+                )}
+              </div>
             </div>
-            <span className="text-xs font-semibold text-slate-500 group-hover:text-[#0F172A] transition-colors flex items-center gap-1">
+            <span className="text-xs font-semibold text-slate-500 group-hover:text-[#0F172A] transition-colors hidden sm:flex items-center gap-1">
               View →
             </span>
           </div>
@@ -172,7 +187,7 @@ export default function TabbedProducts({
             return (
               <TabsContent key={tab.value} value={tab.value} className="mt-0">
                 {tabProducts.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
                     {tabProducts.map((product) => (
                       <ProductCard key={`${tab.value}-${product.id}`} product={product} />
                     ))}

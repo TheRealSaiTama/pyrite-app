@@ -16,11 +16,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/ProductContext";
 import { isRemoteOrDataImage } from "@/lib/product-image";
@@ -55,7 +50,7 @@ const Header = ({
   phone,
   email,
 }: {
-  nav?: { label: string; href: string }[];
+  nav?: { label: string; href: string; group?: string }[];
   megaMenu?: MegaItem[];
   logoUrl?: string | null;
   brandName?: string | null;
@@ -72,7 +67,8 @@ const Header = ({
   const telPhone = displayPhone.replace(/\s+/g, "");
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-  const [mobileOpenSection, setMobileOpenSection] = React.useState<string | null>("category");
+  const [mobileOpenSection, setMobileOpenSection] = React.useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
   const { cartCount, favourites } = useCart();
   const router = useRouter();
 
@@ -213,11 +209,15 @@ const Header = ({
 
   // Standard nav links matching the user's specification
   const navItems = [
-    { label: "Shop", href: "/shop" },
+    { label: "Home", href: "/" },
     { label: "Bulk Orders", href: "/bulk-orders" },
     { label: "Custom Print", href: "/custom-design" },
     { label: "Contact Us", href: "#about" },
   ];
+
+  const occasionLinks = (nav || []).filter((item) => item.group === "shop_occasion");
+  const professionLinks = (nav || []).filter((item) => item.group === "shop_profession");
+  const selectedCategory = categoriesToDisplay.find((item) => item.name === activeCategory) || categoriesToDisplay[0];
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md shadow-xs transition-all">
@@ -509,104 +509,44 @@ const Header = ({
           )}
       </div>
 
-      {/* Row 2: Categories Button + Secondary Navigation Links */}
-      <div className="border-t border-slate-100 hidden md:block">
-        <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-6 lg:gap-8">
-          {/* All Categories Button Trigger */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2.5 bg-[#0F172A] hover:bg-[#1E293B] text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-2xs transition-colors cursor-pointer"
-              >
-                <Menu className="w-4 h-4" />
-                <span>All Categories</span>
-                <ChevronDown className="w-4 h-4 ml-1 opacity-80" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              className="p-6 sm:p-8 w-[min(96vw,1080px)] max-h-[75vh] overflow-y-auto rounded-2xl shadow-2xl border border-slate-100 z-50 bg-white"
-            >
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-6 pb-2.5 border-b border-slate-100 flex items-center justify-between">
-                <span>Our Product Categories</span>
-                <span className="font-normal normal-case text-slate-500">Factory direct catalogue</span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 sm:gap-x-10 gap-y-7">
+      <nav aria-label="Main navigation" className="hidden md:block border-t border-slate-100">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-5 lg:gap-7 text-sm font-medium text-slate-700">
+          <Link href="/" className="py-3 hover:text-slate-950">Home</Link>
+          <div className="relative group">
+            <button type="button" className="flex items-center gap-1 py-3 hover:text-slate-950" aria-haspopup="true">Shop by Category <ChevronDown className="h-4 w-4" /></button>
+            <div className="hidden group-hover:flex group-focus-within:flex absolute top-full left-0 w-[min(850px,80vw)] bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50">
+              <div className="w-64 shrink-0 max-h-[65vh] overflow-y-auto bg-slate-50 py-2">
                 {categoriesToDisplay.map((item) => (
-                  <div key={item.name} className="min-w-0 flex flex-col">
-                    <Link
-                      href={item.href}
-                      prefetch={false}
-                      className="text-xs font-bold text-slate-900 hover:text-amber-800 uppercase tracking-wider block transition-colors pb-1 border-b border-slate-100"
-                    >
-                      {item.name}
-                    </Link>
-                    {item.subcategories && item.subcategories.length > 0 && (
-                      <ul className="mt-2 space-y-1.5">
-                        {item.subcategories.map((sub) => (
-                          <li key={sub.name}>
-                            <Link
-                              href={sub.href}
-                              prefetch={false}
-                              className="text-[12px] text-slate-500 hover:text-[#0F172A] hover:underline transition-colors block py-0.5 leading-snug"
-                            >
-                              {sub.name}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+                  <Link key={item.name} href={item.href} onMouseEnter={() => setActiveCategory(item.name)} onFocus={() => setActiveCategory(item.name)} className={`flex items-center justify-between px-4 py-2.5 text-xs ${selectedCategory?.name === item.name ? "bg-slate-200 text-slate-950" : "hover:bg-slate-100"}`}>
+                    {item.name}<ChevronRight className="h-4 w-4 shrink-0" />
+                  </Link>
                 ))}
               </div>
-              <div className="mt-6 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-slate-500">Over 500+ premium corporate styles</span>
-                <Link
-                  href="/shop"
-                  className="font-semibold text-slate-900 hover:text-amber-800 hover:underline transition-colors"
-                >
-                  View Full Catalog →
-                </Link>
+              {selectedCategory && <div className="p-6 flex-1 max-h-[65vh] overflow-y-auto">
+                <Link href={selectedCategory.href} className="block border-b border-slate-200 pb-3 text-sm font-bold text-slate-900">{selectedCategory.name}</Link>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 pt-4">
+                  {selectedCategory.subcategories?.map((sub) => <Link key={sub.name} href={sub.href} className="text-sm text-slate-600 hover:text-slate-950 hover:underline">{sub.name}</Link>)}
+                </div>
+                <Link href={selectedCategory.href} className="inline-block mt-5 text-xs font-semibold underline">View all {selectedCategory.name}</Link>
+              </div>}
+            </div>
+          </div>
+          {[["Shop by Occasion", occasionLinks], ["Shop by Profession", professionLinks]].map(([title, links]) => (
+            <div key={title as string} className="relative group">
+              <button type="button" className="flex items-center gap-1 py-3 hover:text-slate-950" aria-haspopup="true">{title as string}<ChevronDown className="h-4 w-4" /></button>
+              <div className="hidden group-hover:grid group-focus-within:grid absolute top-full left-0 w-72 gap-1 bg-white border border-slate-200 rounded-lg shadow-xl p-3 z-50">
+                {(links as typeof occasionLinks).map((link) => <Link key={link.label} href={link.href} className="px-3 py-2 text-sm hover:bg-slate-50 rounded">{link.label}</Link>)}
               </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Secondary Nav Links in plain text */}
-          <nav className="flex items-center gap-6 lg:gap-8">
-            {navItems.map((item) => {
-              const isExt = item.href.startsWith("http://") || item.href.startsWith("https://") || item.href.startsWith("//");
-              if (isExt) {
-                return (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-medium text-slate-700 hover:text-[#0F172A] transition-colors py-1"
-                  >
-                    {item.label}
-                  </a>
-                );
-              }
-              return (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  onClick={item.href === "#about" ? handleContactClick : undefined}
-                  className="text-sm font-medium text-slate-700 hover:text-[#0F172A] transition-colors py-1"
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+            </div>
+          ))}
+          {navItems.slice(1).map((item) => <Link key={item.label} href={item.href === "#about" ? "/#footer" : item.href} className="py-3 hover:text-slate-950 whitespace-nowrap">{item.label}</Link>)}
         </div>
-      </div>
+      </nav>
 
       {/* Mobile Menu Panel - Dark accordion matching reference screenshot */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-[#0F172A] text-white divide-y divide-slate-800 shadow-2xl border-t border-slate-800">
+          <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="block px-5 py-3.5 text-xs font-bold uppercase tracking-wider">Home</Link>
           {/* 1. SHOP BY CATEGORY */}
           <div>
             <button
@@ -625,27 +565,11 @@ const Header = ({
               <div className="bg-[#0B132B] px-5 py-3 space-y-2 border-t border-slate-800/60 max-h-72 overflow-y-auto custom-scrollbar">
                 {categoriesToDisplay.map((cat) => (
                   <div key={cat.name} className="py-1">
-                    <Link
-                      href={cat.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="text-xs font-semibold text-slate-200 hover:text-white block py-1"
-                    >
-                      {cat.name}
-                    </Link>
-                    {cat.subcategories && cat.subcategories.length > 0 && (
-                      <div className="pl-3 pt-0.5 flex flex-wrap gap-x-3 gap-y-1">
-                        {cat.subcategories.map((sub) => (
-                          <Link
-                            key={sub.name}
-                            href={sub.href}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                            className="text-[11px] text-slate-400 hover:text-white py-0.5"
-                          >
-                            {sub.name}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between">
+                      <Link href={cat.href} onClick={() => setIsMobileMenuOpen(false)} className="text-xs font-semibold text-slate-200 py-2">{cat.name}</Link>
+                      {Boolean(cat.subcategories?.length) && <button type="button" aria-label={`Show ${cat.name} subcategories`} aria-expanded={activeCategory === cat.name} onClick={() => setActiveCategory(activeCategory === cat.name ? null : cat.name)} className="p-2"><ChevronRight className={`h-4 w-4 ${activeCategory === cat.name ? "rotate-90" : ""}`} /></button>}
+                    </div>
+                    {activeCategory === cat.name && <div className="pl-3 pb-2 grid gap-2">{cat.subcategories?.map((sub) => <Link key={sub.name} href={sub.href} onClick={() => setIsMobileMenuOpen(false)} className="text-xs text-slate-400">{sub.name}</Link>)}</div>}
                   </div>
                 ))}
               </div>
@@ -668,46 +592,19 @@ const Header = ({
             </button>
             {mobileOpenSection === "occasion" && (
               <div className="bg-[#0B132B] px-5 py-3 space-y-2.5 border-t border-slate-800/60">
-                <Link
-                  href="/shop?category=CORPORATE%20GIFT%20SETS"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  Corporate Events & Annual Meets
-                </Link>
-                <Link
-                  href="/shop?category=NEW%20YEAR%20DIARY"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  New Year & Festive Celebrations
-                </Link>
-                <Link
-                  href="/shop?category=EXHIBITION%20VISITOR'S%20GIFT%20IDEAS"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  Trade Shows & Exhibition Giveaways
-                </Link>
-                <Link
-                  href="/shop?category=LEATHER%20GIFT%20ITEMS"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  Client Appreciation & VIP Gifting
-                </Link>
+                {occasionLinks.map((item) => <Link key={item.label} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className="block text-xs font-medium text-slate-300 hover:text-white">{item.label}</Link>)}
               </div>
             )}
           </div>
 
-          {/* 3. SHOP BY OCCUPATION */}
+          {/* 3. SHOP BY PROFESSION */}
           <div>
             <button
               type="button"
               onClick={() => setMobileOpenSection(mobileOpenSection === "occupation" ? null : "occupation")}
               className="w-full px-5 py-3.5 flex items-center justify-between text-left font-bold text-xs sm:text-sm uppercase tracking-wider text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
             >
-              <span>SHOP BY OCCUPATION</span>
+              <span>SHOP BY PROFESSION</span>
               <ChevronRight
                 className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
                   mobileOpenSection === "occupation" ? "rotate-90 text-white" : ""
@@ -716,82 +613,7 @@ const Header = ({
             </button>
             {mobileOpenSection === "occupation" && (
               <div className="bg-[#0B132B] px-5 py-3 space-y-2.5 border-t border-slate-800/60">
-                <Link
-                  href="/shop?category=LEATHER%20BAGS"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  Executive & Leadership
-                </Link>
-                <Link
-                  href="/shop?category=PEN%20STANDS"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  Desk & Administrative Professionals
-                </Link>
-                <Link
-                  href="/shop?category=POWER%20BANK%20DIARIES"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  Tech Professionals & Frequent Travelers
-                </Link>
-                <Link
-                  href="/shop?category=JUTE%20BAGS"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  Sustainable & Field Teams
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* 4. GREAT DEALS AND MORE */}
-          <div>
-            <button
-              type="button"
-              onClick={() => setMobileOpenSection(mobileOpenSection === "deals" ? null : "deals")}
-              className="w-full px-5 py-3.5 flex items-center justify-between text-left font-bold text-xs sm:text-sm uppercase tracking-wider text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
-            >
-              <span>GREAT DEALS AND MORE</span>
-              <ChevronRight
-                className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
-                  mobileOpenSection === "deals" ? "rotate-90 text-white" : ""
-                }`}
-              />
-            </button>
-            {mobileOpenSection === "deals" && (
-              <div className="bg-[#0B132B] px-5 py-3 space-y-2.5 border-t border-slate-800/60">
-                <Link
-                  href="/shop?sortBy=price&sortOrder=asc"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  Budget-Friendly Gifts (Under ₹200)
-                </Link>
-                <Link
-                  href="/bulk-orders"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  Bulk Orders & Factory Wholesale
-                </Link>
-                <Link
-                  href="/custom-design"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  Custom Logo Printing & Embossing Studio
-                </Link>
-                <Link
-                  href="/shop"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="block text-xs font-medium text-slate-300 hover:text-white"
-                >
-                  Full Catalog
-                </Link>
+                {professionLinks.map((item) => <Link key={item.label} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className="block text-xs font-medium text-slate-300 hover:text-white">{item.label}</Link>)}
               </div>
             )}
           </div>
@@ -799,10 +621,10 @@ const Header = ({
           {/* Secondary links & Contact in dark footer */}
           <div className="px-5 py-3.5 bg-[#080d1e] border-t border-slate-800/80">
             <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-slate-300 mb-3">
-              {navItems.map((item) => (
+              {navItems.slice(1).map((item) => (
                 <Link
                   key={item.label}
-                  href={item.href}
+                  href={item.href === "#about" ? "/#footer" : item.href}
                   onClick={(e) => {
                     setIsMobileMenuOpen(false);
                     if (item.href === "#about") handleContactClick(e);

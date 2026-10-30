@@ -24,13 +24,10 @@ export async function getSettings(): Promise<StorefrontSettings> {
 }
 
 export async function getHeaderNav(): Promise<StorefrontNavLink[]> {
-  const mapped = cmsNav("header");
-  if (mapped.length) return mapped;
   return [
-    { label: "Shop", href: "/shop" },
-    { label: "Bulk Orders", href: "/bulk-orders" },
-    { label: "Custom Print", href: "/custom-design" },
-    { label: "About Us", href: "#about" },
+    ...cmsNav("header"),
+    ...cmsNav("shop_occasion").map((item) => ({ ...item, group: "shop_occasion" })),
+    ...cmsNav("shop_profession").map((item) => ({ ...item, group: "shop_profession" })),
   ];
 }
 

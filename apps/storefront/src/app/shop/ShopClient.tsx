@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Diary, Product } from '@prisma/client';
-import { X, Search, SlidersHorizontal, ChevronRight } from 'lucide-react';
+import { X, Search, SlidersHorizontal } from 'lucide-react';
 import { resolveProductImage, PRODUCT_IMAGE_PLACEHOLDER } from "@/lib/product-image";
 import {
   STOREFRONT_CATEGORIES,
@@ -134,11 +134,11 @@ function filterAndSortProducts(products: ShopProduct[], filters: Filters): ShopP
   }
 
   if (filters.minPrice > 0) {
-    filtered = filtered.filter((product: ShopProduct) => product.minPrice && product.minPrice >= filters.minPrice);
+    filtered = filtered.filter((product: ShopProduct) => (product.minPrice ?? product.maxPrice ?? 0) >= filters.minPrice);
   }
 
   if (filters.maxPrice > 0) {
-    filtered = filtered.filter((product: ShopProduct) => product.maxPrice && product.maxPrice <= filters.maxPrice);
+    filtered = filtered.filter((product: ShopProduct) => (product.minPrice ?? product.maxPrice ?? Infinity) <= filters.maxPrice);
   }
 
   return filtered.sort((a: ShopProduct, b: ShopProduct) => {
@@ -243,7 +243,6 @@ export default function ShopClient({
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [mobileShopSection, setMobileShopSection] = useState<string | null>(null);
 
   const pricePresets = useMemo(
     () => [
@@ -339,6 +338,7 @@ export default function ShopClient({
       return {
         ...prev,
         category: nextCats,
+        subcategory: null,
       };
     });
   };
@@ -441,12 +441,12 @@ export default function ShopClient({
     (filters.maxPrice > 0 ? 1 : 0);
 
   return (
-    <main className="container mx-auto px-4 py-12">
-      <div className="flex flex-col lg:flex-row gap-8">
+    <main className="container mx-auto px-4 py-6 md:py-8">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Desktop Sidebar Filters */}
-        <aside className="hidden lg:block lg:w-72 shrink-0">
+        <aside className="hidden lg:block lg:w-64 shrink-0">
           <div className="sticky top-4 space-y-6">
-            <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-md">
+            <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">Refine</p>
               <h2 className="mt-2 text-xl font-semibold text-slate-800">Curate your picks</h2>
               <p className="mt-1 text-sm text-slate-500">Filter by category, material, and price.</p>
@@ -459,7 +459,7 @@ export default function ShopClient({
                     {filters.category.length > 0 && (
                       <button
                         type="button"
-                        onClick={() => setFilters((prev) => ({ ...prev, category: [] }))}
+                        onClick={() => setFilters((prev) => ({ ...prev, category: [], subcategory: null }))}
                         className="text-xs text-rose-500 hover:underline"
                       >
                         Reset
@@ -624,181 +624,6 @@ export default function ShopClient({
 
         {/* Products Main View */}
         <div className="flex-1 min-w-0">
-          {/* Mobile Categories Section Accordion (Aligned with reference screenshot) */}
-          <div className="lg:hidden mb-6 -mx-4 -mt-8 sm:-mt-6 bg-[#0F172A] text-white divide-y divide-slate-800 shadow-sm">
-            {/* 1. SHOP BY CATEGORY */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setMobileShopSection(mobileShopSection === "category" ? null : "category")}
-                className="w-full px-5 py-3.5 flex items-center justify-between text-left font-bold text-xs uppercase tracking-wider text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
-              >
-                <span>SHOP BY CATEGORY</span>
-                <ChevronRight
-                  className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
-                    mobileShopSection === "category" ? "rotate-90 text-white" : ""
-                  }`}
-                />
-              </button>
-              {mobileShopSection === "category" && (
-                <div className="bg-[#0B132B] px-5 py-3 space-y-1.5 border-t border-slate-800/60 max-h-60 overflow-y-auto custom-scrollbar">
-                  {uniqueCategories.map((cat) => {
-                    const isChecked = filters.category.some((c: string) => categoryMatches(cat, c));
-                    return (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => toggleCategory(cat)}
-                        className={`w-full text-left py-1.5 px-2 rounded-md text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                          isChecked ? "bg-slate-800 text-white" : "text-slate-300 hover:text-white"
-                        }`}
-                      >
-                        <span>{cat}</span>
-                        {isChecked && <span className="text-emerald-400 text-xs font-bold">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* 2. SHOP BY OCCASION */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setMobileShopSection(mobileShopSection === "occasion" ? null : "occasion")}
-                className="w-full px-5 py-3.5 flex items-center justify-between text-left font-bold text-xs uppercase tracking-wider text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
-              >
-                <span>SHOP BY OCCASION</span>
-                <ChevronRight
-                  className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
-                    mobileShopSection === "occasion" ? "rotate-90 text-white" : ""
-                  }`}
-                />
-              </button>
-              {mobileShopSection === "occasion" && (
-                <div className="bg-[#0B132B] px-5 py-3 space-y-2 border-t border-slate-800/60 text-xs text-slate-300">
-                  <button
-                    type="button"
-                    onClick={() => setFilters((p) => ({ ...p, category: ["CORPORATE GIFT SETS"] }))}
-                    className="block w-full text-left py-1 hover:text-white cursor-pointer"
-                  >
-                    Corporate Events & Annual Meets
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilters((p) => ({ ...p, category: ["NEW YEAR DIARY"] }))}
-                    className="block w-full text-left py-1 hover:text-white cursor-pointer"
-                  >
-                    New Year & Festive Celebrations
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilters((p) => ({ ...p, category: ["EXHIBITION VISITOR'S GIFT IDEAS"] }))}
-                    className="block w-full text-left py-1 hover:text-white cursor-pointer"
-                  >
-                    Trade Shows & Exhibition Giveaways
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilters((p) => ({ ...p, category: ["LEATHER GIFT ITEMS"] }))}
-                    className="block w-full text-left py-1 hover:text-white cursor-pointer"
-                  >
-                    Client Appreciation & VIP Gifting
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 3. SHOP BY OCCUPATION */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setMobileShopSection(mobileShopSection === "occupation" ? null : "occupation")}
-                className="w-full px-5 py-3.5 flex items-center justify-between text-left font-bold text-xs uppercase tracking-wider text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
-              >
-                <span>SHOP BY OCCUPATION</span>
-                <ChevronRight
-                  className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
-                    mobileShopSection === "occupation" ? "rotate-90 text-white" : ""
-                  }`}
-                />
-              </button>
-              {mobileShopSection === "occupation" && (
-                <div className="bg-[#0B132B] px-5 py-3 space-y-2 border-t border-slate-800/60 text-xs text-slate-300">
-                  <button
-                    type="button"
-                    onClick={() => setFilters((p) => ({ ...p, category: ["LEATHER BAGS"] }))}
-                    className="block w-full text-left py-1 hover:text-white cursor-pointer"
-                  >
-                    Executive & Leadership
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilters((p) => ({ ...p, category: ["PEN STANDS"] }))}
-                    className="block w-full text-left py-1 hover:text-white cursor-pointer"
-                  >
-                    Desk & Administrative Staff
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilters((p) => ({ ...p, category: ["POWER BANK DIARIES"] }))}
-                    className="block w-full text-left py-1 hover:text-white cursor-pointer"
-                  >
-                    Tech Professionals & Travelers
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilters((p) => ({ ...p, category: ["JUTE BAGS"] }))}
-                    className="block w-full text-left py-1 hover:text-white cursor-pointer"
-                  >
-                    Sustainable & Field Teams
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 4. GREAT DEALS AND MORE */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setMobileShopSection(mobileShopSection === "deals" ? null : "deals")}
-                className="w-full px-5 py-3.5 flex items-center justify-between text-left font-bold text-xs uppercase tracking-wider text-white hover:bg-slate-800/60 transition-colors cursor-pointer"
-              >
-                <span>GREAT DEALS AND MORE</span>
-                <ChevronRight
-                  className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
-                    mobileShopSection === "deals" ? "rotate-90 text-white" : ""
-                  }`}
-                />
-              </button>
-              {mobileShopSection === "deals" && (
-                <div className="bg-[#0B132B] px-5 py-3 space-y-2 border-t border-slate-800/60 text-xs text-slate-300">
-                  <button
-                    type="button"
-                    onClick={() => setFilters((p) => ({ ...p, minPrice: 0, maxPrice: 200 }))}
-                    className="block w-full text-left py-1 hover:text-white cursor-pointer"
-                  >
-                    Budget Gifts Under ₹200
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilters((p) => ({ ...p, minPrice: 200, maxPrice: 350 }))}
-                    className="block w-full text-left py-1 hover:text-white cursor-pointer"
-                  >
-                    Popular Picks ₹200 - ₹350
-                  </button>
-                  <Link href="/bulk-orders" className="block py-1 hover:text-white">
-                    Bulk Orders Studio
-                  </Link>
-                  <Link href="/custom-design" className="block py-1 hover:text-white">
-                    Custom Logo Embossing Studio
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Catalog Description Text (Aligned with reference screenshot) */}
           <div className="mb-4 text-xs sm:text-sm text-slate-600 leading-relaxed border-b border-slate-100 pb-3">
             <p>
@@ -809,7 +634,7 @@ export default function ShopClient({
           {/* Header & Controls Bar */}
           <div className="flex items-center justify-between mb-4 sm:mb-6 gap-3 flex-wrap">
             <div>
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-900">
+              <h1 className="text-xl md:text-2xl font-bold text-slate-900">
                 {heading} ({results.length})
               </h1>
               {filters.subcategory && (
@@ -963,7 +788,7 @@ export default function ShopClient({
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
               {results.map((product) => (
                 <ShopCard key={String(product.id)} product={product} />
               ))}
@@ -1059,7 +884,7 @@ export default function ShopClient({
                 {filters.category.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => setFilters((prev) => ({ ...prev, category: [] }))}
+                    onClick={() => setFilters((prev) => ({ ...prev, category: [], subcategory: null }))}
                     className="text-xs text-rose-600 hover:underline cursor-pointer"
                   >
                     Clear all
@@ -1114,7 +939,7 @@ export default function ShopClient({
                 {filters.category.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => setFilters((prev) => ({ ...prev, category: [] }))}
+                    onClick={() => setFilters((prev) => ({ ...prev, category: [], subcategory: null }))}
                     className="text-xs text-rose-500 hover:underline cursor-pointer"
                   >
                     Reset

@@ -89,7 +89,7 @@ export type NavLinkRow = {
   sortOrder?: number;
 };
 
-export type NavLinkOut = { label: string; href: string };
+export type NavLinkOut = { label: string; href: string; group?: string };
 
 export function mapEnabledNavLinks(rows: NavLinkRow[] | null | undefined): NavLinkOut[] {
   if (!rows?.length) return [];

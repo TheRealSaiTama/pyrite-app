@@ -456,7 +456,7 @@ export default function Footer({
   };
 
   return (
-    <footer className="relative bg-secondary pb-[30px] pt-4 sm:pt-6 mt-28 sm:mt-36 lg:mt-40">
+    <footer id="footer" className="relative bg-secondary pb-[30px] pt-4 sm:pt-6 mt-28 sm:mt-36 lg:mt-40">
       {/* Overlapping Contact Card */}
       <div className="container relative z-20 -mt-24 sm:-mt-32 lg:-mt-36 mb-14 sm:mb-20">
         <div className="relative rounded-3xl sm:rounded-[32px] bg-gradient-to-br from-[#FAF3EC] via-[#F9F0E7] to-[#F4E6D8] border border-[#EADBCE] shadow-[0_25px_60px_-15px_rgba(15,23,42,0.12)] p-6 sm:p-10 lg:p-12 overflow-hidden sm:overflow-visible">

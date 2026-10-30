@@ -17,6 +17,8 @@ export const Route = createFileRoute("/_authenticated/nav")({
 
 const GROUPS = [
   { key: "header", label: "Header navigation" },
+  { key: "shop_occasion", label: "Shop by Occasion" },
+  { key: "shop_profession", label: "Shop by Profession" },
   { key: "footer_shop", label: "Footer — Shop" },
   { key: "footer_company", label: "Footer — Company" },
   { key: "footer_support", label: "Footer — Support" },

@@ -8,7 +8,7 @@
         "start": "next start",
         "lint": "next lint",
         "typecheck": "tsc --noEmit",
-        "test": "npx tsx --test --test-concurrency=1 src/lib/cms/mappers.test.ts src/lib/cms/storage.test.ts src/lib/cms/workflow.test.ts src/lib/cms/integration.test.ts src/lib/catalog-categories.test.ts src/lib/seo.test.ts",
+        "test": "npx tsx --test --test-concurrency=1 src/lib/cms/local-auth.test.ts src/lib/cms/mappers.test.ts src/lib/cms/storage.test.ts src/lib/cms/workflow.test.ts src/lib/cms/integration.test.ts src/lib/catalog-categories.test.ts src/lib/seo.test.ts",
         "db:seed": "npx tsx prisma/seed.ts",
         "postinstall": "prisma generate || true"
     },

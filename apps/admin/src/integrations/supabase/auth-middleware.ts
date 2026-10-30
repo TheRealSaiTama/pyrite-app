@@ -29,6 +29,46 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
+async function verifyLocalCmsToken(token: string): Promise<Record<string, unknown> | null> {
+  try {
+    const [header, body, signature, extra] = token.split('.');
+    if (!header || !body || !signature || extra) return null;
+
+    const decode = (value: string) => {
+      const binary = atob(value.replace(/-/g, '+').replace(/_/g, '/'));
+      return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    };
+    const jwtHeader = JSON.parse(new TextDecoder().decode(decode(header)));
+    if (jwtHeader.alg !== 'HS256' || jwtHeader.typ !== 'JWT') return null;
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode('pyrite-local-cms'),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify'],
+    );
+    const valid = await crypto.subtle.verify(
+      'HMAC',
+      key,
+      decode(signature),
+      new TextEncoder().encode(`${header}.${body}`),
+    );
+    if (!valid) return null;
+
+    const claims = JSON.parse(new TextDecoder().decode(decode(body))) as Record<string, unknown>;
+    if (
+      typeof claims.sub !== 'string' || !claims.sub ||
+      typeof claims.email !== 'string' ||
+      typeof claims.exp !== 'number' || claims.exp <= Math.floor(Date.now() / 1000) ||
+      claims.role !== 'authenticated' || claims.aud !== 'authenticated' || claims.token_use !== 'access'
+    ) return null;
+    return claims;
+  } catch {
+    return null;
+  }
+}
+
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     
@@ -88,20 +128,32 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
       }
     );
 
-    const { data, error } = await supabase.auth.getClaims(token);
-    let claims = data?.claims as Record<string, any> | undefined;
-    if ((error || !claims?.sub) && isLocalCmsUrl(SUPABASE_URL)) {
-      try {
-        const payload = JSON.parse(
-          Buffer.from(token.split(".")[1] || "", "base64url").toString("utf8"),
-        );
-        if (payload?.sub) claims = payload;
-      } catch {
-        claims = undefined;
-      }
-    }
-    if (!claims?.sub) {
+    const localCmsDevelopment = isLocalCmsUrl(SUPABASE_URL) && process.env.NODE_ENV !== 'production';
+    const claims = localCmsDevelopment
+      ? await verifyLocalCmsToken(token)
+      : (await supabase.auth.getClaims(token)).data?.claims as Record<string, unknown> | undefined;
+    if (typeof claims?.sub !== 'string' || !claims.sub) {
       throw new Error('Unauthorized: Invalid token');
+    }
+
+    if (localCmsDevelopment) {
+      return next({
+        context: {
+          supabase,
+          userId: claims.sub as string,
+          claims,
+        },
+      });
+    }
+
+    const { data: ownerRole, error: roleError } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('user_id', claims.sub)
+      .eq('role', 'owner')
+      .maybeSingle();
+    if (roleError || !ownerRole) {
+      throw new Error('Unauthorized: Owner access required');
     }
 
     return next({

@@ -75,8 +75,8 @@ function AuthPage() {
           </p>
           {localCms && (
             <p className="text-xs text-muted-foreground border border-border rounded-md px-3 py-2">
-              Local CMS mode: any email + password signs you in. Edits save to the
-              storefront file and show on http://localhost:3000.
+              Local CMS mode is for development. Production admin access must use
+              an authenticated Supabase project.
             </p>
           )}
         </div>
@@ -95,27 +95,29 @@ function AuthPage() {
           </div>
 
           <h2 className="font-display text-2xl font-semibold">
-            {!configured
+            {!configured || (localCms && import.meta.env.PROD)
               ? "Connect Supabase"
               : mode === "sign-in"
                 ? "Sign in"
                 : "First-time setup"}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {!configured
+            {localCms && import.meta.env.PROD
+              ? "Connect the production Supabase project before using the admin."
+              : !configured || (localCms && import.meta.env.PROD)
               ? "The admin needs a publishable key in apps/admin/.env before you can sign in."
               : mode === "sign-in"
                 ? "Use the owner email and password."
                 : "The very first person to sign up becomes the owner. After that, this form does nothing."}
           </p>
 
-          {!configured && (
+          {(!configured || (localCms && import.meta.env.PROD)) && (
             <div className="mt-6 space-y-3 rounded-md border border-border bg-surface p-4 text-sm">
               <p>Add this line to <code className="font-mono text-xs">apps/admin/.env</code> and restart the admin server:</p>
               <pre className="overflow-x-auto rounded bg-background p-3 text-xs font-mono">VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-or-publishable-key</pre>
               <p className="text-muted-foreground">
                 Copy it from Supabase → Project Settings → API. Project URL is already set to{" "}
-                <code className="font-mono text-xs">cqwtficwurpfgbgbmgmq</code>.
+                <code className="font-mono text-xs">yxjbqsfwhypfhxoaachw</code>.
               </p>
             </div>
           )}
@@ -162,15 +164,17 @@ function AuthPage() {
                   {mode === "sign-in" ? "Sign in" : "Create owner account"}
                 </Button>
               </form>
-              <button
-                type="button"
-                onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
-                className="mt-6 text-sm text-muted-foreground hover:text-foreground transition"
-              >
-                {mode === "sign-in"
-                  ? "First time here? Create the owner account →"
-                  : "← Back to sign in"}
-              </button>
+              {!import.meta.env.PROD && (
+                <button
+                  type="button"
+                  onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
+                  className="mt-6 text-sm text-muted-foreground hover:text-foreground transition"
+                >
+                  {mode === "sign-in"
+                    ? "First time here? Create the owner account →"
+                    : "← Back to sign in"}
+                </button>
+              )}
             </>
           )}
         </div>

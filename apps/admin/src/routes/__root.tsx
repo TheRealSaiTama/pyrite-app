@@ -39,7 +39,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
@@ -51,7 +51,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
       <div className="max-w-md text-center">
         <h1 className="text-xl font-display font-semibold">Something broke</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {error?.message || "Try refreshing or head back to the dashboard."}
+          {error instanceof Error ? error.message : "Try refreshing or head back to the dashboard."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button

@@ -1,4 +1,3 @@
-const DEAD_SUPABASE_HOST = "yxjbqsfwhypfhxoaachw.supabase.co";
 const STOREFRONT_CMS_URL = "https://pyrite-app-storefront.vercel.app/api/cms";
 const LOCAL_CMS_ANON = "local-dev-anon";
 const LOCAL_CMS_SERVICE = "local-dev-service";
@@ -19,7 +18,7 @@ function read(names: string[]): string {
 }
 
 export function resolveBackendUrl(raw: string): string {
-  if (!raw || raw.includes(DEAD_SUPABASE_HOST)) return STOREFRONT_CMS_URL;
+  if (!raw) return STOREFRONT_CMS_URL;
   return raw.replace(/\/+$/, "");
 }
 

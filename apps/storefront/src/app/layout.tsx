@@ -11,6 +11,7 @@ import { getSettings, getSeo } from "@/lib/site";
 import { DEFAULT_BRAND_NAME, DEFAULT_SITE_URL, normalizePublicSiteUrl } from "@/lib/cms/mappers";
 import { buildOrganizationSchema, buildWebSiteSchema } from "@/lib/seo";
 
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   try {

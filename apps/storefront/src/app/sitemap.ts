@@ -3,12 +3,12 @@ import { getSettings } from "@/lib/site";
 import { cmsCatalog } from "@/lib/cms/load";
 import { normalizePublicSiteUrl } from "@/lib/cms/mappers";
 
-export const revalidate = 3600; // revalidate sitemap hourly
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const settings = await getSettings();
   const baseUrl = normalizePublicSiteUrl(settings.siteUrl);
-  const catalog = cmsCatalog().filter((item) => item.enabled !== false);
+  const catalog = (await cmsCatalog()).filter((item) => item.enabled !== false);
 
   const now = new Date();
 

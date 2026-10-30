@@ -316,7 +316,7 @@ describe("Category deletion and stripping logic", () => {
 describe("Category sync across navbar mega-menu and homepage carousel", () => {
   it("cmsMegaMenu includes active categories and omits disabled test categories", async () => {
     const { cmsMegaMenu } = await import("./load");
-    const mega = cmsMegaMenu();
+    const mega = await cmsMegaMenu();
     assert.ok(mega.length > 0, "MegaMenu should return categories");
     const diaryItem = mega.find((c) => c.name.toUpperCase() === "NEW YEAR DIARY");
     assert.ok(diaryItem, "Active NEW YEAR DIARY category must be present in megaMenu");
@@ -327,7 +327,7 @@ describe("Category sync across navbar mega-menu and homepage carousel", () => {
 
   it("cmsSections('home') keeps active categories and omits the test collection", async () => {
     const { cmsSections } = await import("./load");
-    const sections = cmsSections("home");
+    const sections = await cmsSections("home");
     assert.ok(sections.categories, "Home sections must include categories");
     assert.ok(Array.isArray(sections.categories.items), "categories.items must be an array");
     const diaryCat = sections.categories.items.find((c: any) => c.name.toUpperCase() === "NEW YEAR DIARY");

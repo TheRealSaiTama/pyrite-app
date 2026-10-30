@@ -19,9 +19,9 @@ function resolveImageUrl(url: string | null | undefined): string {
   return resolveProductImage(url);
 }
 
-function searchCms(query: string, source: "product" | "diary", limit: number): SearchResult[] {
+function searchCms(catalog: Awaited<ReturnType<typeof cmsCatalog>>, query: string, source: "product" | "diary", limit: number): SearchResult[] {
   const q = query.toLowerCase();
-  return cmsCatalog()
+  return catalog
     .filter((item) => item.source === source)
     .filter(
       (item) =>
@@ -43,14 +43,6 @@ function searchCms(query: string, source: "product" | "diary", limit: number): S
     }));
 }
 
-async function searchDatabaseProducts(query: string, limit: number): Promise<SearchResult[]> {
-  return searchCms(query, "product", limit);
-}
-
-async function searchDatabaseDiaries(query: string, limit: number): Promise<SearchResult[]> {
-  return searchCms(query, "diary", limit);
-}
-
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
@@ -58,10 +50,9 @@ export async function GET(request: NextRequest) {
     if (!query) {
       return NextResponse.json({ results: [] }, { headers: { "Cache-Control": "no-store" } });
     }
-    const [diaries, products] = await Promise.all([
-      searchDatabaseDiaries(query, 7),
-      searchDatabaseProducts(query, 5),
-    ]);
+    const catalog = await cmsCatalog();
+    const diaries = searchCms(catalog, query, "diary", 7);
+    const products = searchCms(catalog, query, "product", 5);
     const combined: SearchResult[] = [];
     for (const item of [...diaries, ...products]) {
       if (combined.length >= 10) break;

@@ -1,4 +1,5 @@
-import { readCms, type CmsRow } from "@/lib/cms/local-store";
+import { cache } from "react";
+import { readCms, type CmsDb, type CmsRow } from "@/lib/cms/local-store";
 import {
   mapSiteSettings,
   mapEnabledNavLinks,
@@ -32,6 +33,47 @@ export type CatalogItem = {
   source: "product" | "diary";
   moq?: number;
 };
+
+const readPublicCms = cache(async (): Promise<CmsDb> => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const localCms = url?.includes("/api/cms");
+
+  if (!url || !key || localCms) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("The production storefront requires a real Supabase URL and publishable key");
+    }
+    return readCms();
+  }
+
+  const tables = [
+    ["site_settings", "id,brand_name,tagline,logo_url,favicon_url,primary_color,site_url,socials,updated_at"],
+    ["page_sections", "*"],
+    ["page_seo", "*"],
+    ["nav_links", "*"],
+    ["products", "*"],
+    ["diaries", "*"],
+  ] as const;
+  const rows = await Promise.all(
+    tables.map(async ([table, fields]) => {
+      const response = await fetch(`${url}/rest/v1/${table}?select=${fields}`, {
+        headers: { apikey: key },
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!response.ok) throw new Error(`Supabase ${table} read failed (${response.status})`);
+      return [table, (await response.json()) as CmsRow[]] as const;
+    }),
+  );
+
+  return {
+    site_settings: [], page_sections: [], page_seo: [], nav_links: [],
+    products: [], diaries: [], media_assets: [], user_roles: [],
+    ...Object.fromEntries(rows),
+  } as CmsDb;
+});
 
 function asSettings(row: CmsRow | undefined): SiteSettingsOut {
   if (!row) return mapSiteSettings(null);
@@ -98,12 +140,14 @@ function asCatalog(row: CmsRow, source: "product" | "diary"): CatalogItem {
   };
 }
 
-export function cmsSettings(): SiteSettingsOut {
-  return asSettings(readCms().site_settings[0]);
+export async function cmsSettings(): Promise<SiteSettingsOut> {
+  const db = await readPublicCms();
+  return asSettings(db.site_settings[0]);
 }
 
-export function cmsNav(groupKey: string): NavLinkOut[] {
-  const rows = readCms().nav_links.filter((r) => r.group_key === groupKey);
+export async function cmsNav(groupKey: string): Promise<NavLinkOut[]> {
+  const db = await readPublicCms();
+  const rows = db.nav_links.filter((r) => r.group_key === groupKey);
   return mapEnabledNavLinks(
     rows.map((r) => ({
       label: r.label,
@@ -116,8 +160,8 @@ export function cmsNav(groupKey: string): NavLinkOut[] {
 
 import { getDefaultCategoryNav } from "@/lib/catalog-categories";
 
-export function cmsMegaMenu(): MegaMenuItemOut[] {
-  const db = readCms();
+export async function cmsMegaMenu(): Promise<MegaMenuItemOut[]> {
+  const db = await readPublicCms();
   const sections = db.page_sections;
   const row = sections.find(
     (s) => s.page_key === "site" && s.section_key === "mega_menu" && s.enabled !== false,
@@ -183,7 +227,7 @@ export function cmsMegaMenu(): MegaMenuItemOut[] {
   }
 
   // 3. Merge distinct categories from active catalog products and diaries
-  const catalog = cmsCatalog();
+  const catalog = await cmsCatalog();
   for (const item of catalog) {
     if (!item.category) continue;
     const parts = String(item.category)
@@ -219,8 +263,8 @@ export function cmsMegaMenu(): MegaMenuItemOut[] {
   }));
 }
 
-export function cmsSections(pageKey: string): Record<string, Record<string, any>> {
-  const db = readCms();
+export async function cmsSections(pageKey: string): Promise<Record<string, Record<string, any>>> {
+  const db = await readPublicCms();
   const rows = db.page_sections.filter((s) => s.page_key === pageKey);
   const out = mapEnabledSections(
     rows.map((s) => ({
@@ -271,8 +315,9 @@ export function cmsSections(pageKey: string): Record<string, Record<string, any>
   return out;
 }
 
-export function cmsSeo(pageKey: string): { title: string | null; description: string | null; ogImageUrl: string | null } | null {
-  const row = readCms().page_seo.find((s) => s.page_key === pageKey);
+export async function cmsSeo(pageKey: string): Promise<{ title: string | null; description: string | null; ogImageUrl: string | null } | null> {
+  const db = await readPublicCms();
+  const row = db.page_seo.find((s) => s.page_key === pageKey);
   if (!row) return null;
   return {
     title: row.title ?? null,
@@ -281,23 +326,23 @@ export function cmsSeo(pageKey: string): { title: string | null; description: st
   };
 }
 
-export function cmsCatalog(): CatalogItem[] {
-  const db = readCms();
+export async function cmsCatalog(): Promise<CatalogItem[]> {
+  const db = await readPublicCms();
   return [
     ...db.products.filter((r) => r.enabled !== false).map((r) => asCatalog(r, "product")),
     ...db.diaries.filter((r) => r.enabled !== false).map((r) => asCatalog(r, "diary")),
   ];
 }
 
-export function cmsProducts(): CatalogItem[] {
-  return cmsCatalog().filter((r) => r.source === "product");
+export async function cmsProducts(): Promise<CatalogItem[]> {
+  return (await cmsCatalog()).filter((r) => r.source === "product");
 }
 
-export function cmsDiaries(): CatalogItem[] {
-  return cmsCatalog().filter((r) => r.source === "diary");
+export async function cmsDiaries(): Promise<CatalogItem[]> {
+  return (await cmsCatalog()).filter((r) => r.source === "diary");
 }
 
-export function cmsItemByIdOrSlug(id: string): CatalogItem | null {
+export async function cmsItemByIdOrSlug(id: string): Promise<CatalogItem | null> {
   if (!id) return null;
   let cleanId = String(id);
   try {
@@ -305,16 +350,16 @@ export function cmsItemByIdOrSlug(id: string): CatalogItem | null {
   } catch {}
   const needle = cleanId.replace(/^\/+|\/+$/g, "").toLowerCase().trim();
   return (
-    cmsCatalog().find(
+    (await cmsCatalog()).find(
       (r) => r.id.toLowerCase() === needle || r.slug.toLowerCase() === needle,
     ) || null
   );
 }
 
-export function cmsShopChrome(): ShopChromeOut {
-  return mapShopChrome(cmsSections("shop").main);
+export async function cmsShopChrome(): Promise<ShopChromeOut> {
+  return mapShopChrome((await cmsSections("shop")).main);
 }
 
-export function cmsProductChrome(): ProductChromeOut {
-  return mapProductChrome(cmsSections("product").main);
+export async function cmsProductChrome(): Promise<ProductChromeOut> {
+  return mapProductChrome((await cmsSections("product")).main);
 }

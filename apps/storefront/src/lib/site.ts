@@ -20,23 +20,28 @@ export type StorefrontNavLink = NavLinkOut;
 export type StorefrontMegaItem = MegaMenuItemOut;
 
 export async function getSettings(): Promise<StorefrontSettings> {
-  return cmsSettings();
+  return await cmsSettings();
 }
 
 export async function getHeaderNav(): Promise<StorefrontNavLink[]> {
+  const [header, occasion, profession] = await Promise.all([
+    cmsNav("header"),
+    cmsNav("shop_occasion"),
+    cmsNav("shop_profession"),
+  ]);
   return [
-    ...cmsNav("header"),
-    ...cmsNav("shop_occasion").map((item) => ({ ...item, group: "shop_occasion" })),
-    ...cmsNav("shop_profession").map((item) => ({ ...item, group: "shop_profession" })),
+    ...header,
+    ...occasion.map((item) => ({ ...item, group: "shop_occasion" })),
+    ...profession.map((item) => ({ ...item, group: "shop_profession" })),
   ];
 }
 
 export async function getFooterNav(groupKey = "footer"): Promise<StorefrontNavLink[]> {
-  return cmsNav(groupKey);
+  return await cmsNav(groupKey);
 }
 
 export async function getMegaMenu(): Promise<MegaMenuItemOut[]> {
-  return cmsMegaMenu();
+  return await cmsMegaMenu();
 }
 
 export type StorefrontSeo = {
@@ -46,7 +51,7 @@ export type StorefrontSeo = {
 };
 
 export async function getSeo(pageKey: string): Promise<StorefrontSeo | null> {
-  return cmsSeo(pageKey);
+  return await cmsSeo(pageKey);
 }
 
 export type FooterLinkGroups = {
@@ -80,13 +85,13 @@ export async function getStorefrontData() {
 export async function getPageSections(
   pageKey: string,
 ): Promise<Record<string, Record<string, any>>> {
-  return cmsSections(pageKey);
+  return await cmsSections(pageKey);
 }
 
 export async function getShopChrome(): Promise<ShopChromeOut> {
-  return cmsShopChrome();
+  return await cmsShopChrome();
 }
 
 export async function getProductChrome(): Promise<ProductChromeOut> {
-  return cmsProductChrome();
+  return await cmsProductChrome();
 }

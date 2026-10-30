@@ -146,7 +146,7 @@ const FULFILLMENT_STEPS = [
   {
     step: "01",
     title: "Initial Scope & Logo Asset",
-    description: "Minimum order quantities begin at 100 units. Share target volume, destination city, dispatch window, and vector logo.",
+    description: "Minimum quantities start at 50 units for listed products and vary by series and customization. Share your target volume, destination city, dispatch window, and vector logo.",
   },
   {
     step: "02",
@@ -234,7 +234,7 @@ export default async function BulkOrdersPage() {
               </h1>
 
               <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-normal mb-8">
-                <strong className="text-slate-900 font-semibold">Pyrite Corporate Gifts</strong> is the direct corporate supply division of our Delhi-based manufacturing facility, producing custom-engineered diaries, daily planners, executive notebooks, and premium desk utilities since 1999. We focus strictly on bulk B2B procurement rather than retail gift baskets. Whether your requirement is 100 units or 10,000 fully customized pieces, we operate on firm, guaranteed delivery timelines you can rely on.
+                <strong className="text-slate-900 font-semibold">Pyrite Corporate Gifts</strong> is the direct corporate supply division of our Delhi-based manufacturing facility, producing custom-engineered diaries, daily planners, executive notebooks, and premium desk utilities since 1999. We focus strictly on bulk B2B procurement rather than retail gift baskets. Listed products start at 50 units, while quantity and lead time for customized runs depend on the selected product and specifications.
               </p>
 
               <div className="pt-2">
@@ -336,7 +336,7 @@ export default async function BulkOrdersPage() {
                 Our Bulk Fulfillment Process
               </h2>
               <p className="text-base text-slate-600 leading-relaxed">
-                Standard minimum order quantities begin at 100 units. Send us your target volume, destination city, required dispatch window, and vector logo file. Our team locks in the paper density, book size (typically executive A5 or B5), custom box packaging, and production schedule before you issue a formal PO. Specific production runs between 500 and 5,000 units follow calibrated turnaround cycles.
+                Listed products start at 50 units; customization and production quantities depend on the selected product and specifications. Send us your target volume, destination city, required dispatch window, and vector logo file. Our team confirms paper density, book size (typically executive A5 or B5), custom box packaging, and production schedule before you issue a formal PO. Specific production runs between 500 and 5,000 units follow calibrated turnaround cycles.
               </p>
             </div>
 

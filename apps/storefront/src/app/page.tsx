@@ -22,7 +22,7 @@ import { cmsCatalog, cmsItemByIdOrSlug } from "@/lib/cms/load";
 export const revalidate = 0;
 
 async function getCatalog(): Promise<any[]> {
-  const live = filterLiveCatalog(cmsCatalog() as any[]);
+  const live = filterLiveCatalog((await cmsCatalog()) as any[]);
   return live.map((row) => ({
     ...row,
     id: String(row.id),
@@ -77,8 +77,7 @@ async function hydrateCatalogPicks(catalog: any[], sections: Record<string, any>
   const have = new Set(catalog.map((r) => String(r.id).toLowerCase()));
   const missing = wanted.filter((id) => !have.has(id.toLowerCase()));
   if (!missing.length) return catalog;
-  const extra = missing
-    .map((id) => cmsItemByIdOrSlug(id))
+  const extra = (await Promise.all(missing.map((id) => cmsItemByIdOrSlug(id))))
     .filter(Boolean)
     .map((row: any) => ({ ...row, id: String(row.id) }));
   if (!extra.length) return catalog;

@@ -33,11 +33,11 @@ export const metadata: Metadata = {
 };
 
 async function getProducts() {
-  return cmsProducts();
+  return await cmsProducts();
 }
 
 async function getDiaries() {
-  return cmsDiaries();
+  return await cmsDiaries();
 }
 
 export default async function ShopPage() {

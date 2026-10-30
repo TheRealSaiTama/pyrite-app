@@ -80,7 +80,7 @@ function normalizeTags(value?: string | string[] | null): string[] {
 }
 
 async function getProduct(id: string): Promise<any | null> {
-  const item = cmsItemByIdOrSlug(id);
+  const item = await cmsItemByIdOrSlug(id);
   if (item) {
     return {
       id: item.id,
@@ -109,7 +109,7 @@ async function getRelatedProducts(
   const cat = (category || "").split(",")[0]?.trim().toLowerCase() || "";
   if (!cat) return [];
   const idStr = String(currentId);
-  return cmsCatalog()
+  return (await cmsCatalog())
     .filter(
       (item) =>
         item.id !== idStr &&

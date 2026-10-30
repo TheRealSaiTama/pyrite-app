@@ -12,11 +12,15 @@ import {
   type CmsRow,
   type CmsDb,
 } from "@/lib/cms/local-store";
+import {
+  signLocalCmsToken,
+  verifyLocalCmsCredentials,
+  verifyLocalCmsToken,
+} from "@/lib/cms/local-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const JWT_SECRET = "pyrite-local-cms";
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -27,17 +31,6 @@ const CORS: Record<string, string> = {
 
 function json(body: unknown, status = 200, extra: Record<string, string> = {}) {
   return NextResponse.json(body, { status, headers: { ...CORS, ...extra } });
-}
-
-function b64url(input: string | Buffer) {
-  return Buffer.from(input).toString("base64url");
-}
-
-function signJwt(payload: Record<string, unknown>) {
-  const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const body = b64url(JSON.stringify(payload));
-  const sig = crypto.createHmac("sha256", JWT_SECRET).update(`${header}.${body}`).digest("base64url");
-  return `${header}.${body}.${sig}`;
 }
 
 function localUser(email = "admin@local") {
@@ -53,28 +46,37 @@ function localUser(email = "admin@local") {
   };
 }
 
-function tokenPayload(email: string) {
+function tokenPayload(email: string, token_use: "access" | "refresh") {
   const now = Math.floor(Date.now() / 1000);
   return {
     sub: LOCAL_OWNER_ID,
     email,
     role: "authenticated",
     aud: "authenticated",
-    exp: now + 60 * 60 * 24 * 7,
+    token_use,
+    exp: now + 60 * 60 * 24 * (token_use === "access" ? 7 : 30),
     iat: now,
   };
 }
 
 function session(email: string) {
-  const access_token = signJwt(tokenPayload(email));
+  const access_token = signLocalCmsToken(tokenPayload(email, "access"));
+  const refresh_token = signLocalCmsToken(tokenPayload(email, "refresh"));
+  if (!access_token || !refresh_token) return null;
   return {
     access_token,
     token_type: "bearer",
     expires_in: 60 * 60 * 24 * 7,
     expires_at: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
-    refresh_token: "local-refresh",
+    refresh_token,
     user: localUser(email),
   };
+}
+
+function requireCmsWriteAuth(req: NextRequest) {
+  return process.env.NODE_ENV === "production"
+    ? json({ error: "Local CMS writes are disabled in production; use Supabase" }, 410)
+    : null;
 }
 
 function matchOp(cell: unknown, expr: string): boolean {
@@ -150,6 +152,10 @@ function pk(table: keyof CmsDb): string {
 
 async function handleRest(req: NextRequest, table: string) {
   if (!isCmsTable(table)) return json({ error: `unknown table ${table}` }, 404);
+  if (["POST", "PATCH", "PUT", "DELETE"].includes(req.method)) {
+    const authError = requireCmsWriteAuth(req);
+    if (authError) return authError;
+  }
   const url = new URL(req.url);
   const prefer = req.headers.get("prefer") || "";
   const wantObject =
@@ -270,6 +276,10 @@ function getMimeType(filePath: string): string {
 }
 
 async function handleStorage(req: NextRequest, parts: string[]) {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    const authError = requireCmsWriteAuth(req);
+    if (authError) return authError;
+  }
   // Support bucket management: /storage/v1/bucket or /storage/v1/bucket/{bucket}
   if (parts[2] === "bucket") {
     if (req.method === "GET") {
@@ -486,26 +496,40 @@ async function handleStorage(req: NextRequest, parts: string[]) {
 }
 
 async function handleAuth(req: NextRequest, parts: string[]) {
+  if (process.env.NODE_ENV === "production") {
+    return json({ message: "Local CMS authentication is disabled in production; use Supabase" }, 410);
+  }
   const action = parts.slice(1).join("/");
   if (req.method === "GET" && (action === "v1/user" || parts.includes("user"))) {
     const authHeader = req.headers.get("authorization") || "";
-    let email = "admin@local";
-    if (authHeader.startsWith("Bearer ")) {
-      try {
-        const token = authHeader.replace(/^Bearer\s+/i, "");
-        const parts = token.split(".");
-        if (parts.length === 3) {
-          const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
-          if (payload?.email) email = payload.email;
-        }
-      } catch {}
-    }
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    const claims = verifyLocalCmsToken(token, "access");
+    if (!claims) return json({ message: "Invalid token" }, 401);
+    const email = claims.email;
     return json({ ...localUser(email), aud: "authenticated" });
   }
-  if (req.method === "POST" && (action === "v1/signup" || action.includes("signup") || action.includes("token"))) {
-    const body = (await req.json().catch(() => ({}))) as { email?: string; password?: string };
-    const email = body.email || "admin@local";
-    return json(session(email));
+  if (req.method === "POST" && action === "v1/token") {
+    const body = (await req.json().catch(() => ({}))) as { email?: string; password?: string; refresh_token?: string };
+    const grantType = new URL(req.url).searchParams.get("grant_type");
+    let email = body.email || "admin@local";
+    if (grantType === "refresh_token") {
+      const claims = verifyLocalCmsToken(body.refresh_token || "", "refresh");
+      if (!claims) return json({ message: "Invalid refresh token" }, 401);
+      email = claims.email;
+    } else if (grantType === "password") {
+      if (!verifyLocalCmsCredentials(email, body.password || "")) {
+        return json({ message: "Invalid email or password" }, 401);
+      }
+    } else {
+      return json({ message: "Unsupported grant type" }, 400);
+    }
+    const nextSession = session(email);
+    return nextSession ? json(nextSession) : json({ message: "Local CMS authentication is unavailable" }, 503);
+  }
+  if (req.method === "POST" && (action === "v1/signup" || action.includes("signup"))) {
+    const body = (await req.json().catch(() => ({}))) as { email?: string };
+    const nextSession = session(body.email || "admin@local");
+    return nextSession ? json(nextSession) : json({ message: "Local CMS authentication is unavailable" }, 503);
   }
   if (req.method === "POST" && action === "v1/logout") {
     return new NextResponse(null, { status: 204, headers: CORS });

@@ -12,7 +12,7 @@ const categoryHrefMap: Record<string, string> = {
   "New Year Diary": shopCategoryHref("NEW YEAR DIARY"),
   "CUSTOMISED DIARY & NOTE BOOKS": shopCategoryHref("CUSTOMISED DIARY & NOTE BOOKS"),
   "CUSTOMISED DIARY AND NOTE BOOKS": shopCategoryHref("CUSTOMISED DIARY & NOTE BOOKS"),
-  "Premium Diary": shopCategoryHref("CUSTOMISED DIARY & NOTE BOOKS"),
+  "Premium Diary": shopCategoryHref("Premium Diary"),
   "LEATHER GIFT ITEMS": shopCategoryHref("LEATHER GIFT ITEMS"),
   "LEATHER BAGS": shopCategoryHref("LEATHER BAGS"),
   "JUTE BAGS": shopCategoryHref("JUTE BAGS"),

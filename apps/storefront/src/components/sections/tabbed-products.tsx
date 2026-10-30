@@ -127,16 +127,13 @@ export default function TabbedProducts({
     byId.set(idStr.toLowerCase(), p);
   }
 
-  const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
-  const productsByCategory = categories.reduce(
-    (acc, category) => {
-      if (category) {
-        acc[category] = products.filter((p) => p.category === category);
-      }
-      return acc;
-    },
-    {} as { [key: string]: Product[] },
-  );
+  const productsByCategory: Record<string, Product[]> = {};
+  for (const product of products) {
+    for (const category of (product.category || "").split(",").map((item) => item.trim()).filter(Boolean)) {
+      const key = Object.keys(productsByCategory).find((item) => item.toLowerCase() === category.toLowerCase()) || category;
+      (productsByCategory[key] ||= []).push(product);
+    }
+  }
 
   const tabKeys: string[] =
     customTabs.length > 0 ? customTabs.map((t) => t.name) : Object.keys(productsByCategory);
@@ -164,12 +161,12 @@ export default function TabbedProducts({
           {heading}
         </h3>
         <Tabs defaultValue={tabEntries[0].value} className="w-full">
-          <TabsList className="flex flex-wrap justify-start gap-x-3 gap-y-2 mb-10 bg-transparent p-0 h-auto">
+          <TabsList className="flex w-full max-w-full flex-wrap justify-start gap-x-3 gap-y-2 mb-10 bg-transparent p-0 h-auto">
             {tabEntries.map((tab) => (
               <TabsTrigger
                 key={tab.value}
                 value={tab.value}
-                className="px-5 py-2.5 rounded-full text-sm font-semibold text-slate-600 transition-all data-[state=active]:bg-[#0F172A] data-[state=active]:text-white data-[state=active]:shadow-md"
+                className="max-w-full whitespace-normal px-5 py-2.5 rounded-full text-sm font-semibold text-slate-600 transition-all data-[state=active]:bg-[#0F172A] data-[state=active]:text-white data-[state=active]:shadow-md"
               >
                 {tab.name}
               </TabsTrigger>

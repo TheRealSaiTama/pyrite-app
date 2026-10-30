@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, Check, ShieldCheck, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, ShieldCheck, Loader2, MessageCircle } from "lucide-react";
 import Header from "@/components/sections/header";
 import Footer from "@/components/sections/footer";
 import { useCart } from "@/context/ProductContext";
@@ -84,6 +84,13 @@ export default function CheckoutClient({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [whatsappFallback, setWhatsappFallback] = useState(false);
+  const whatsappPhone = String(settings?.whatsappNumber || settings?.phone || "+91 87966 84365").replace(/\D/g, "");
+  const whatsappMessage = [
+    "Hi Pyrite team, I need help completing my proforma request.",
+    ...cart.map((item) => `${item.name} × ${item.quantity}`),
+  ].join("\n");
+  const whatsappUrl = `https://wa.me/${whatsappPhone || "918796684365"}?text=${encodeURIComponent(whatsappMessage)}`;
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -100,6 +107,7 @@ export default function CheckoutClient({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+    setWhatsappFallback(false);
 
     if (!formData.firstName.trim() || !formData.lastName.trim()) {
       setErrorMsg("Please enter your full name.");
@@ -146,6 +154,7 @@ export default function CheckoutClient({
       const result = await response.json();
 
       if (!response.ok || !result.success) {
+        setWhatsappFallback(response.status === 502 || response.status === 503);
         throw new Error(result.message || "Failed to process your order request.");
       }
 
@@ -198,6 +207,17 @@ export default function CheckoutClient({
             <div>
               <p className="font-semibold">Unable to proceed</p>
               <p>{errorMsg}</p>
+              {whatsappFallback && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 font-semibold text-white transition-colors hover:bg-emerald-700"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Continue on WhatsApp
+                </a>
+              )}
             </div>
           </div>
         )}

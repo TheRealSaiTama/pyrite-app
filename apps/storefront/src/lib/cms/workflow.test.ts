@@ -314,22 +314,24 @@ describe("Category deletion and stripping logic", () => {
 });
 
 describe("Category sync across navbar mega-menu and homepage carousel", () => {
-  it("cmsMegaMenu includes categories from home:categories, catalog:categories, and products", async () => {
+  it("cmsMegaMenu includes active categories and omits disabled test categories", async () => {
     const { cmsMegaMenu } = await import("./load");
     const mega = cmsMegaMenu();
     assert.ok(mega.length > 0, "MegaMenu should return categories");
-    const testItem = mega.find((c) => c.name.toUpperCase() === "TEST");
-    assert.ok(testItem, "TEST category must be present in megaMenu");
-    assert.equal(testItem.href, "/shop?category=TEST");
+    const diaryItem = mega.find((c) => c.name.toUpperCase() === "NEW YEAR DIARY");
+    assert.ok(diaryItem, "Active NEW YEAR DIARY category must be present in megaMenu");
+    assert.equal(diaryItem.href, "/shop?category=NEW%20YEAR%20DIARY");
+    assert.equal(mega.some((c) => c.name.toUpperCase() === "TEST"), false);
+    assert.equal(mega.some((c) => c.name.toUpperCase() === "NEW YEAR DIARY BOOKS"), false);
   });
 
-  it("cmsSections('home') includes categories from home:categories and catalog:categories", async () => {
+  it("cmsSections('home') keeps active categories and omits the test collection", async () => {
     const { cmsSections } = await import("./load");
     const sections = cmsSections("home");
     assert.ok(sections.categories, "Home sections must include categories");
     assert.ok(Array.isArray(sections.categories.items), "categories.items must be an array");
-    const testCat = sections.categories.items.find((c: any) => c.name.toUpperCase() === "TEST");
-    assert.ok(testCat, "TEST category must be present in home categories items");
-    assert.equal(testCat.name, "TEST");
+    const diaryCat = sections.categories.items.find((c: any) => c.name.toUpperCase() === "NEW YEAR DIARY");
+    assert.ok(diaryCat, "Active NEW YEAR DIARY category must be present on home");
+    assert.equal(sections.categories.items.some((c: any) => c.name.toUpperCase() === "TEST"), false);
   });
 });

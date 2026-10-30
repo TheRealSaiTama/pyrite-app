@@ -432,10 +432,9 @@ export default function CheckoutClient({
             <div className="rounded-xl bg-gray-100 p-5 space-y-2 border border-gray-200">
               <h4 className="text-sm font-bold text-gray-900">Please Note:</h4>
               <p className="text-xs text-gray-700 leading-relaxed">
-                <span className="text-red-600 font-bold">*SHIPPING IS NOT FREE*</span> Please
-                continue with your order by selecting your preferred shipping choice, we will get back
-                to you soon to give you exact amount for shipping according to your location and
-                shipping choice.
+                <span className="text-red-600 font-bold">*SHIPPING IS NOT FREE*</span> Our sales
+                team will calculate the shipping charge for your location and order volume and include
+                it in the final proforma invoice.
               </p>
               <p className="text-xs text-gray-600">
                 * Cash on Delivery (COD) is not available on this product.

@@ -101,10 +101,6 @@ const ProductCard = ({ product }: { product: Product }) => {
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
                 Custom Logo
               </span>
-              <div className="flex items-center">
-                <span className="text-amber-500 text-xs mr-1">★</span>
-                <span className="text-xs font-semibold text-slate-700">4.9</span>
-              </div>
             </div>
 
             <h3 className="text-xs sm:text-base font-bold text-slate-900 leading-snug line-clamp-2 mb-1.5 sm:mb-2 group-hover:text-slate-700 transition-colors">

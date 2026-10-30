@@ -43,7 +43,7 @@ describe("SEO & Structured Data Helpers", () => {
     assert.ok(action.target.urlTemplate.includes("/shop?search="));
   });
 
-  it("builds valid Product schema with offers and aggregateRating", () => {
+  it("builds Product schema without invented review totals", () => {
     const prod = buildProductSchema({
       id: "prod-101",
       name: "Executive Leather Diary 2026",
@@ -63,7 +63,7 @@ describe("SEO & Structured Data Helpers", () => {
     assert.equal(offers.price, "350.00");
     assert.equal(offers.priceCurrency, "INR");
     assert.equal(offers.availability, "https://schema.org/InStock");
-    assert.equal((prod.aggregateRating as any).ratingValue, "4.9");
+    assert.equal(prod.aggregateRating, undefined);
   });
 
   it("builds valid BreadcrumbList schema with 1-based indexing", () => {

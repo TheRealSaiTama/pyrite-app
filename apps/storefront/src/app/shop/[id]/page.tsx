@@ -194,8 +194,11 @@ export default async function ProductDetailPage({
             Home
           </Link>
           <span>/</span>
-          <Link href="/shop" className="hover:text-primary transition-colors">
-            {product.category?.split(",")[0]?.trim() || "Shop"}
+          <Link
+            href={primaryCategory === "Shop" ? "/shop" : `/shop?category=${encodeURIComponent(primaryCategory)}`}
+            className="hover:text-primary transition-colors"
+          >
+            {primaryCategory}
           </Link>
           {product.category?.split(",")[1] && (
             <>
@@ -220,7 +223,6 @@ export default async function ProductDetailPage({
 
         {/* Selectable Customer Reviews & Product Tags Section */}
         <ProductReviewsAndTags
-          productId={product.id}
           productName={product.name}
           tags={product.tags}
         />

@@ -320,7 +320,7 @@
       ],
       "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
       "featured": true,
-      "enabled": true,
+      "enabled": false,
       "gallery": [
         "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
       ],
@@ -348,7 +348,7 @@
       ],
       "image_url": "/api/cms/storage/v1/object/public/site-media/test-upload-1791113425804.png",
       "featured": false,
-      "enabled": true,
+      "enabled": false,
       "gallery": [
         "http://localhost:3000/api/cms/storage/v1/object/public/site-media/1791724511148-dqmmwp-sec-img-nyd2.jpg"
       ],
@@ -381,7 +381,7 @@
       ],
       "image_url": "http://localhost:3000/api/cms/storage/v1/object/public/site-media/1791724511148-dqmmwp-sec-img-nyd2.jpg",
       "featured": false,
-      "enabled": true,
+      "enabled": false,
       "gallery": [
         "http://localhost:3000/api/cms/storage/v1/object/public/site-media/1791725682835-mj7u5r-sec-img-nyd2.jpg"
       ],
@@ -1422,7 +1422,7 @@
       "cover_type": "PU Leather",
       "image_url": "http://localhost:3000/api/cms/storage/v1/object/public/site-media/1790691302803-t18dex-NYD_1_.png",
       "featured": false,
-      "enabled": true,
+      "enabled": false,
       "gallery": [
         "http://localhost:3000/api/cms/storage/v1/object/public/site-media/1790691321431-3z7l9f-Your_Logo.png",
         "http://localhost:3000/api/cms/storage/v1/object/public/site-media/1790691326808-1yj2fa-1789146328569-s5decp-Grey_Mobile_Pocket_Leather_Diary_converted.webp"
@@ -1473,7 +1473,7 @@
       "cover_type": "PU Leather",
       "image_url": "https://example.com/diary.jpg",
       "featured": false,
-      "enabled": true,
+      "enabled": false,
       "gallery": [],
       "features": {
         "moq": {
@@ -1958,6 +1958,16 @@
       "size_bytes": 13,
       "data_base64": "ZmFrZS1wbmctZGF0YQ==",
       "created_at": "2026-10-11T14:54:55.965Z"
+    },
+    {
+      "id": "test-id-123",
+      "path": "site-media/test-upload-1793349322947.png",
+      "url": "/api/cms/storage/v1/object/public/site-media/test-upload-1793349322947.png",
+      "alt": "test upload",
+      "mime_type": "image/png",
+      "size_bytes": 13,
+      "data_base64": "ZmFrZS1wbmctZGF0YQ==",
+      "created_at": "2026-10-30T08:35:23.016Z"
     }
   ],
   "user_roles": [
@@ -2108,15 +2118,6 @@
             "alt": "Exhibition gifts",
             "href": "",
             "sort_order": 12
-          },
-          {
-            "name": "TEST",
-            "subtitle": "Explore Collection",
-            "image_url": "/categories/CORPORATE GIFTSETS.png",
-            "bgColor": "#0F172A",
-            "alt": "TEST",
-            "href": "",
-            "sort_order": 13
           }
         ]
       },
@@ -2328,7 +2329,7 @@
             "image_url": "/categories/NEW YEAR DIARY.png",
             "href": "",
             "sort_order": 2,
-            "enabled": true
+            "enabled": false
           },
           {
             "name": "LEATHER GIFT ITEMS",
@@ -2416,7 +2417,7 @@
             "image_url": "/categories/CORPORATE GIFTSETS.png",
             "href": "",
             "sort_order": 13,
-            "enabled": true
+            "enabled": false
           }
         ]
       },
@@ -2499,11 +2500,7 @@
       "section_key": "categories",
       "title": "Catalog Categories Metadata",
       "content": {
-        "customCategories": [
-          {
-            "name": "TEST"
-          }
-        ],
+        "customCategories": [],
         "customSubcategories": {},
         "categorySeo": {}
       },

@@ -179,14 +179,6 @@ export function buildProductSchema(params: ProductSchemaParams): SchemaOrgItem {
         name: brandName,
       },
     },
-    // ponytail: realistic baseline review score based on customer testimonials for rich snippets
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.9",
-      reviewCount: "24",
-      bestRating: "5",
-      worstRating: "1",
-    },
   };
 }
 

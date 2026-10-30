@@ -115,8 +115,6 @@ export default function TabbedProducts({
       price: minPrice ?? undefined,
       description: p.description || "",
       image: resolveProductImage(p.imageUrl || p.image_url || p.image),
-      rating: 5,
-      reviewCount: 121,
       currency: "INR" as const,
       category: p.category,
     };
